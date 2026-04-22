@@ -1,0 +1,219 @@
+<?php
+// ================================================================
+// iCONIFERz — Complete SEO Head Code
+// Paste just before </head> in header.php
+// ================================================================
+
+// --- TITLE TAG ---
+if ( is_front_page() ) {
+    echo '<title>Technology News &amp; Insights | iCONIFERz &#8211; AI, Cyber, Mobile &amp; More</title>' . "\n";
+} elseif ( is_single() ) {
+    echo '<title>' . esc_html( get_the_title() ) . ' | iCONIFERz</title>' . "\n";
+} elseif ( is_category() ) {
+    echo '<title>' . esc_html( single_cat_title( '', false ) ) . ' News &amp; Insights | iCONIFERz</title>' . "\n";
+} elseif ( is_page() ) {
+    echo '<title>' . esc_html( get_the_title() ) . ' | iCONIFERz</title>' . "\n";
+} elseif ( is_tag() ) {
+    echo '<title>' . esc_html( single_tag_title( '', false ) ) . ' | iCONIFERz</title>' . "\n";
+} elseif ( is_author() ) {
+    echo '<title>' . esc_html( get_the_author() ) . ' | iCONIFERz</title>' . "\n";
+} else {
+    echo '<title>' . esc_html( wp_title( '|', false, 'right' ) ) . 'iCONIFERz</title>' . "\n";
+}
+
+// --- GLOBAL META (all pages) ---
+echo '<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">' . "\n";
+echo '<meta name="author" content="iCONIFERz">' . "\n";
+echo '<meta property="og:site_name" content="iCONIFERz">' . "\n";
+echo '<meta property="og:locale" content="en_US">' . "\n";
+
+// --- HOMEPAGE ---
+if ( is_front_page() ) {
+    echo '<meta name="description" content="Stay ahead with iCONIFERz – your trusted source for the latest technology news, AI breakthroughs, cybersecurity, mobile tech, and innovation insights. Updated daily.">' . "\n";
+    echo '<link rel="canonical" href="https://iconiferz.com/" />' . "\n";
+    echo '<meta property="og:type" content="website">' . "\n";
+    echo '<meta property="og:title" content="Technology News &amp; Insights | iCONIFERz">' . "\n";
+    echo '<meta property="og:description" content="Stay ahead with iCONIFERz – your trusted source for the latest technology news, AI, cybersecurity, mobile tech, and innovation insights.">' . "\n";
+    echo '<meta property="og:url" content="https://iconiferz.com/">' . "\n";
+    echo '<meta property="og:image" content="https://iconiferz.com/wp-content/uploads/2025/07/iCONIFERz-Logo.webp">' . "\n";
+    echo '<meta property="og:image:width" content="1200">' . "\n";
+    echo '<meta property="og:image:height" content="630">' . "\n";
+    echo '<link rel="preload" as="image" fetchpriority="high" href="https://iconiferz.com/wp-content/uploads/2026/04/3D-Bioprinting-Organ-Transplants-and-Tissue-Engineering-Breakthroughs.webp">' . "\n";
+
+    // Homepage WebPage Schema
+    $hp_schema = array(
+        '@context'     => 'https://schema.org',
+        '@type'        => 'WebPage',
+        'name'         => 'Technology News & Insights | iCONIFERz',
+        'url'          => 'https://iconiferz.com/',
+        'description'  => 'Stay ahead with iCONIFERz – your trusted source for the latest technology news, AI, cybersecurity, mobile tech, and innovation insights.',
+        'inLanguage'   => 'en-US',
+        'isPartOf'     => array( '@type' => 'WebSite', 'name' => 'iCONIFERz', 'url' => 'https://iconiferz.com' ),
+        'publisher'    => array(
+            '@type' => 'Organization',
+            'name'  => 'iCONIFERz',
+            'logo'  => array( '@type' => 'ImageObject', 'url' => 'https://iconiferz.com/wp-content/uploads/2025/07/iCONIFERz-Logo.webp' ),
+        ),
+        'dateModified' => date( 'c' ),
+    );
+    echo '<script type="application/ld+json">' . wp_json_encode( $hp_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+}
+
+// --- SINGLE POSTS ---
+if ( is_single() ) {
+    global $post;
+    $post_url     = esc_url( get_permalink() );
+    $post_title   = esc_attr( get_the_title() );
+    $post_excerpt = esc_attr( wp_strip_all_tags( get_the_excerpt() ) );
+    $post_img     = esc_url( get_the_post_thumbnail_url( $post->ID, 'large' ) );
+    $pub_date     = get_the_date( 'c' );
+    $mod_date     = get_the_modified_date( 'c' );
+    $author_name  = esc_attr( get_the_author() );
+    $author_url   = esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) );
+
+    echo '<meta name="description" content="' . $post_excerpt . '">' . "\n";
+    echo '<link rel="canonical" href="' . $post_url . '" />' . "\n";
+
+    // Open Graph
+    echo '<meta property="og:type" content="article">' . "\n";
+    echo '<meta property="og:title" content="' . $post_title . '">' . "\n";
+    echo '<meta property="og:description" content="' . $post_excerpt . '">' . "\n";
+    echo '<meta property="og:url" content="' . $post_url . '">' . "\n";
+    if ( $post_img ) echo '<meta property="og:image" content="' . $post_img . '">' . "\n";
+    echo '<meta property="article:published_time" content="' . $pub_date . '">' . "\n";
+    echo '<meta property="article:modified_time" content="' . $mod_date . '">' . "\n";
+
+    // Twitter Card
+    echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+    echo '<meta name="twitter:title" content="' . $post_title . '">' . "\n";
+    echo '<meta name="twitter:description" content="' . $post_excerpt . '">' . "\n";
+    if ( $post_img ) echo '<meta name="twitter:image" content="' . $post_img . '">' . "\n";
+
+    // BlogPosting Schema
+    $article_schema = array(
+        '@context'         => 'https://schema.org',
+        '@type'            => 'BlogPosting',
+        'headline'         => get_the_title(),
+        'url'              => get_permalink(),
+        'datePublished'    => $pub_date,
+        'dateModified'     => $mod_date,
+        'author'           => array(
+            '@type' => 'Person',
+            'name'  => get_the_author(),
+            'url'   => $author_url,
+        ),
+        'publisher'        => array(
+            '@type' => 'Organization',
+            'name'  => 'iCONIFERz',
+            'logo'  => array(
+                '@type'  => 'ImageObject',
+                'url'    => 'https://iconiferz.com/wp-content/uploads/2025/07/iCONIFERz-Logo.webp',
+                'width'  => 1000,
+                'height' => 300,
+            ),
+        ),
+        'image'            => array(
+            '@type' => 'ImageObject',
+            'url'   => get_the_post_thumbnail_url( $post->ID, 'large' ),
+        ),
+        'description'      => wp_strip_all_tags( get_the_excerpt() ),
+        'mainEntityOfPage' => array(
+            '@type' => 'WebPage',
+            '@id'   => get_permalink(),
+        ),
+        'inLanguage'       => 'en-US',
+    );
+    echo '<script type="application/ld+json">' . wp_json_encode( $article_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+}
+
+// --- CATEGORY PAGES ---
+if ( is_category() ) {
+    $cat_name = single_cat_title( '', false );
+    $cat_url  = esc_url( get_category_link( get_queried_object_id() ) );
+    $cat_desc = strip_tags( category_description() );
+    $cat_meta = $cat_desc ? esc_attr( $cat_desc ) : 'Browse all ' . esc_attr( $cat_name ) . ' articles on iCONIFERz – latest news and insights.';
+    echo '<meta name="description" content="' . $cat_meta . '">' . "\n";
+    echo '<link rel="canonical" href="' . $cat_url . '" />' . "\n";
+    echo '<meta property="og:type" content="website">' . "\n";
+    echo '<meta property="og:title" content="' . esc_attr( $cat_name ) . ' News &amp; Insights | iCONIFERz">' . "\n";
+    echo '<meta property="og:url" content="' . $cat_url . '">' . "\n";
+}
+
+// --- STATIC PAGES (About, Contact etc) ---
+if ( is_page() && ! is_front_page() ) {
+    global $post;
+    $page_url = esc_url( get_permalink() );
+    $page_exc = esc_attr( wp_strip_all_tags( get_the_excerpt() ) );
+    if ( $page_exc ) echo '<meta name="description" content="' . $page_exc . '">' . "\n";
+    echo '<link rel="canonical" href="' . $page_url . '" />' . "\n";
+    echo '<meta property="og:type" content="website">' . "\n";
+    echo '<meta property="og:title" content="' . esc_attr( get_the_title() ) . ' | iCONIFERz">' . "\n";
+    echo '<meta property="og:url" content="' . $page_url . '">' . "\n";
+}
+?>
+
+<!-- SPEED: Preconnect & DNS Prefetch -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="//fonts.googleapis.com">
+<link rel="dns-prefetch" href="//fonts.gstatic.com">
+<link rel="dns-prefetch" href="//www.google-analytics.com">
+<link rel="dns-prefetch" href="//www.googletagmanager.com">
+
+<!-- PRELOAD: Logo -->
+<link rel="preload" as="image" fetchpriority="high"
+  href="https://iconiferz.com/wp-content/uploads/2025/07/iCONIFERz-Logo.webp">
+
+<!-- ORGANIZATION SCHEMA -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "iCONIFERz",
+  "alternateName": "iCONIFERz Technology News",
+  "url": "https://iconiferz.com",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://iconiferz.com/wp-content/uploads/2025/07/iCONIFERz-Logo.webp",
+    "width": 1000,
+    "height": 300
+  },
+  "description": "iCONIFERz is a leading technology news platform covering AI, cybersecurity, mobile tech, blockchain, robotics, space and more.",
+  "foundingDate": "2019",
+  "email": "info@iconiferz.com",
+  "sameAs": [
+    "https://www.facebook.com/iconiferz",
+    "https://www.linkedin.com/company/iconiferz",
+    "https://www.tumblr.com/iconiferz",
+    "https://medium.com/@iconiferz",
+    "https://www.instagram.com/iconiferz/",
+    "https://bsky.app/profile/iconiferz.bsky.social/",
+    "https://www.threads.com/@iconiferz"
+  ],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "email": "info@iconiferz.com",
+    "contactType": "editorial"
+  }
+}
+</script>
+
+<!-- WEBSITE SCHEMA + SITELINKS SEARCH BOX -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "iCONIFERz",
+  "url": "https://iconiferz.com",
+  "description": "Technology News and Insights – AI, Cybersecurity, Mobile, Blockchain, Space and more.",
+  "inLanguage": "en-US",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://iconiferz.com/?s={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
