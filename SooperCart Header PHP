@@ -1,0 +1,1069 @@
+<?php
+/**
+ * Header template with SEO enhancements for soopercart.com
+ *
+ * @package Avada
+ * @subpackage Templates
+ */
+
+// Do not allow directly accessing this file.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 'Direct script access denied.' );
+}
+
+// ================================================================
+// SOOPERCART — SEO Code v4.0 (May 2026)
+// ----------------------------------------------------------------
+// Best Gadgets & Honest Reviews
+// 
+// Avada handles : <title>, meta description, canonical (let it)
+// This code adds: Open Graph, all Schema, Speed hints, FAQ schema,
+//                 AI crawler signals, 2026 E-E-A-T properties,
+//                 Review/Rating schema for product reviews
+// 
+// CUSTOMIZED FOR : E-commerce + Blog + Reviews
+// ENHANCEMENTS   : Product review schema, rating aggregates,
+//                  author expertise signals, gadget entity markup,
+//                  purchase intent optimization
+// ================================================================
+
+// ================================================================
+// CONSTANTS — change image URLs here only, nowhere else
+// ================================================================
+define( 'SOOPERCART_FALLBACK_SOCIAL_IMG', 'https://soopercart.com/wp-content/uploads/social-share.webp' );
+define( 'SOOPERCART_LOGO_IMG',            'https://soopercart.com/wp-content/uploads/2026/04/cropped-SooperCart-Best-Gadgets-Honest-Reviews-Favicon.webp' );
+define( 'SOOPERCART_SITE_URL',            'https://soopercart.com' );
+
+add_action( 'wp_head', 'soopercart_seo_head', 1 );
+
+
+// ================================================================
+// HELPER — get real og:image mime type
+// Reads actual attachment mime type instead of hardcoding webp.
+// Falls back to image/webp for the static fallback banner.
+// ================================================================
+function soopercart_get_image_mime( $attachment_id = 0 ) {
+	if ( $attachment_id ) {
+		$mime = get_post_mime_type( $attachment_id );
+		if ( $mime ) {
+			return esc_attr( $mime );
+		}
+	}
+	return 'image/webp'; // fallback banner is always webp
+}
+
+
+// ================================================================
+// HELPER — get cached schema JSON string
+// Uses WP transients so Organization + WebSite JSON is not
+// regenerated on every single page request.
+// ================================================================
+function soopercart_get_static_schemas() {
+	$cache_key = 'soopercart_static_schemas';
+	$cached    = get_transient( $cache_key );
+	if ( $cached ) {
+		return $cached;
+	}
+
+	$org_schema = array(
+		'@context'      => 'https://schema.org',
+		'@type'         => 'Organization',
+		'name'          => 'SooperCart',
+		'alternateName' => 'SooperCart - Best Gadgets & Honest Reviews',
+		'url'           => SOOPERCART_SITE_URL,
+		'logo'          => array(
+			'@type'  => 'ImageObject',
+			'url'    => SOOPERCART_LOGO_IMG,
+			'width'  => 1000,
+			'height' => 300,
+		),
+		'description'   => 'SooperCart provides expert gadget reviews, honest product recommendations, tech news, and buying guides for consumers looking for the best tech solutions.',
+		'foundingDate'  => '2019',
+		'email'         => 'info@soopercart.com',
+		'sameAs'        => array(
+			'https://www.facebook.com/SooperCartOfficial',
+			'https://www.instagram.com/soopercart_',
+			'https://www.linkedin.com/company/soopercartofficial',
+			'https://bsky.app/profile/soopercart.bsky.social',
+			'https://www.threads.com/@soopercart_',
+		),
+		'contactPoint'  => array(
+			'@type'       => 'ContactPoint',
+			'email'       => 'info@soopercart.com',
+			'contactType' => 'editorial',
+		),
+	);
+
+	$site_schema = array(
+		'@context'        => 'https://schema.org',
+		'@type'           => 'WebSite',
+		'name'            => 'SooperCart',
+		'url'             => SOOPERCART_SITE_URL,
+		'description'     => 'Best Gadgets & Honest Reviews – Expert Tech Recommendations and Buying Guides',
+		'inLanguage'      => 'en-US',
+		'potentialAction' => array(
+			'@type'       => 'SearchAction',
+			'target'      => array(
+				'@type'       => 'EntryPoint',
+				'urlTemplate' => SOOPERCART_SITE_URL . '/?s={search_term_string}',
+			),
+			'query-input' => 'required name=search_term_string',
+		),
+	);
+
+	$output = '<script type="application/ld+json">' . wp_json_encode( $org_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+	$output .= '<script type="application/ld+json">' . wp_json_encode( $site_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+
+	// Cache for 12 hours — cleared automatically when you update Theme Options
+	set_transient( $cache_key, $output, 12 * HOUR_IN_SECONDS );
+	return $output;
+}
+
+// Clear static schema cache when any post is saved
+add_action( 'save_post', function() {
+	delete_transient( 'soopercart_static_schemas' );
+} );
+
+
+// ================================================================
+// FAQ AUTO-DETECTION — v4.0 (for review guides and Q&A sections)
+// ================================================================
+function soopercart_extract_faqs( $post_content ) {
+	$faqs = array();
+
+	// Use do_blocks() — renders Gutenberg blocks into clean HTML
+	// without triggering Avada's full content filter chain.
+	$rendered = do_blocks( $post_content );
+
+	// ---------------------------------------------------------------
+	// METHOD 1 — Scoped to FAQ section
+	// Find H2 headings that signal an FAQ section, then extract
+	// only H3/H4 questions that follow, stopping at the next H2.
+	// ---------------------------------------------------------------
+
+	// Step 1: split content at every H2 boundary
+	$h2_sections = preg_split( '/<h2[^>]*>[\s\S]*?<\/h2>/i', $rendered );
+	$h2_matches  = array();
+	preg_match_all( '/<h2[^>]*>([\s\S]*?)<\/h2>/i', $rendered, $h2_matches, PREG_SET_ORDER );
+
+	foreach ( $h2_matches as $idx => $h2_match ) {
+		$h2_text = trim( wp_strip_all_tags( $h2_match[1] ) );
+
+		// Only process sections whose H2 signals FAQ content
+		$is_faq_section = (
+			stripos( $h2_text, 'faq' ) !== false ||
+			stripos( $h2_text, 'frequently asked' ) !== false ||
+			stripos( $h2_text, 'common questions' ) !== false ||
+			stripos( $h2_text, 'questions' ) !== false ||
+			stripos( $h2_text, 'specs' ) !== false ||
+			stripos( $h2_text, 'specifications' ) !== false ||
+			stripos( $h2_text, 'buying guide' ) !== false
+		);
+
+		if ( ! $is_faq_section ) {
+			continue;
+		}
+
+		// Section body is everything after this H2 until the next H2
+		$section_body = isset( $h2_sections[ $idx + 1 ] ) ? $h2_sections[ $idx + 1 ] : '';
+		if ( empty( $section_body ) ) {
+			continue;
+		}
+
+		// Step 2: find H3/H4 questions within this FAQ section
+		if ( preg_match_all(
+			'/<h[3-4][^>]*>([\s\S]*?)<\/h[3-4]>([\s\S]*?)(?=<h[2-4]|$)/i',
+			$section_body,
+			$q_matches,
+			PREG_SET_ORDER
+		) ) {
+			foreach ( $q_matches as $q_match ) {
+				$question    = trim( wp_strip_all_tags( $q_match[1] ) );
+				$answer_html = $q_match[2];
+
+				// Must end with ? (after trimming whitespace)
+				if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) {
+					continue;
+				}
+
+				// Step 3: collect ALL consecutive <p> tags as the answer
+				$answer_parts = array();
+				if ( preg_match_all( '/<p[^>]*>([\s\S]*?)<\/p>/i', $answer_html, $p_matches ) ) {
+					foreach ( $p_matches[1] as $p ) {
+						$part = trim( wp_strip_all_tags( $p ) );
+						if ( $part ) {
+							$answer_parts[] = $part;
+						}
+					}
+				}
+				$answer = implode( ' ', $answer_parts );
+
+				if ( $question && $answer ) {
+					$faqs[] = array(
+						'question' => $question,
+						'answer'   => $answer,
+					);
+				}
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// METHOD 2 — Classic Editor: <p><strong>Question?</strong></p>
+	// ---------------------------------------------------------------
+	if ( empty( $faqs ) ) {
+		if ( preg_match_all(
+			'/<p[^>]*>\s*<strong[^>]*>([\s\S]*?)<\/strong>\s*<\/p>([\s\S]*?)(?=<p[^>]*>\s*<strong|$)/i',
+			$rendered,
+			$matches,
+			PREG_SET_ORDER
+		) ) {
+			foreach ( $matches as $match ) {
+				$question    = trim( wp_strip_all_tags( $match[1] ) );
+				$answer_html = $match[2];
+				if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) {
+					continue;
+				}
+				$answer_parts = array();
+				if ( preg_match_all( '/<p[^>]*>([\s\S]*?)<\/p>/i', $answer_html, $p_matches ) ) {
+					foreach ( $p_matches[1] as $p ) {
+						$part = trim( wp_strip_all_tags( $p ) );
+						if ( $part ) {
+							$answer_parts[] = $part;
+						}
+					}
+				}
+				$answer = implode( ' ', $answer_parts );
+				if ( $question && $answer ) {
+					$faqs[] = array(
+						'question' => $question,
+						'answer'   => $answer,
+					);
+				}
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// METHOD 3 — Definition list <dt>Question?</dt><dd>Answer</dd>
+	// ---------------------------------------------------------------
+	if ( empty( $faqs ) ) {
+		if ( preg_match_all(
+			'/<dt[^>]*>([\s\S]*?)<\/dt>[\s\S]{0,200}?<dd[^>]*>([\s\S]*?)<\/dd>/i',
+			$rendered,
+			$matches,
+			PREG_SET_ORDER
+		) ) {
+			foreach ( $matches as $match ) {
+				$question = trim( wp_strip_all_tags( $match[1] ) );
+				$answer   = trim( wp_strip_all_tags( $match[2] ) );
+				if ( $question && $answer && '?' === substr( rtrim( $question ), -1 ) ) {
+					$faqs[] = array(
+						'question' => $question,
+						'answer'   => $answer,
+					);
+				}
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// METHOD 4 — WordPress 6.3+ wp:details accordion block
+	// ---------------------------------------------------------------
+	if ( empty( $faqs ) ) {
+		if ( preg_match_all(
+			'/<details[^>]*>[\s\S]{0,100}?<summary[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/i',
+			$rendered,
+			$matches,
+			PREG_SET_ORDER
+		) ) {
+			foreach ( $matches as $match ) {
+				$question    = trim( wp_strip_all_tags( $match[1] ) );
+				$answer_html = $match[2];
+				if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) {
+					continue;
+				}
+				$answer_parts = array();
+				if ( preg_match_all( '/<p[^>]*>([\s\S]*?)<\/p>/i', $answer_html, $p_matches ) ) {
+					foreach ( $p_matches[1] as $p ) {
+						$part = trim( wp_strip_all_tags( $p ) );
+						if ( $part ) {
+							$answer_parts[] = $part;
+						}
+					}
+				}
+				$answer = implode( ' ', $answer_parts );
+				if ( $question && $answer ) {
+					$faqs[] = array(
+						'question' => $question,
+						'answer'   => $answer,
+					);
+				}
+			}
+		}
+	}
+
+	// Deduplicate by question text
+	$seen  = array();
+	$clean = array();
+	foreach ( $faqs as $faq ) {
+		$key = md5( $faq['question'] );
+		if ( ! isset( $seen[ $key ] ) ) {
+			$seen[ $key ] = true;
+			$clean[]      = $faq;
+		}
+	}
+
+	return $clean;
+}
+
+
+// ================================================================
+// BREADCRUMB SCHEMA HELPER
+// Home › Category › Post Title  (single posts/reviews)
+// Home › Category Name          (category archives)
+// Home › Tag Name               (tag archives)
+// Home › Author Name            (author archives)
+// Home › Page Title             (static pages)
+// ================================================================
+function soopercart_breadcrumb_schema() {
+	$items    = array();
+	$position = 1;
+
+	$items[] = array(
+		'@type'    => 'ListItem',
+		'position' => $position++,
+		'name'     => 'Home',
+		'item'     => home_url( '/' ),
+	);
+
+	if ( is_single() ) {
+		$cats = get_the_category();
+		if ( ! empty( $cats ) ) {
+			$items[] = array(
+				'@type'    => 'ListItem',
+				'position' => $position++,
+				'name'     => esc_html( $cats[0]->name ),
+				'item'     => esc_url( get_category_link( $cats[0]->term_id ) ),
+			);
+		}
+		$items[] = array(
+			'@type'    => 'ListItem',
+			'position' => $position++,
+			'name'     => esc_html( get_the_title() ),
+			'item'     => esc_url( get_permalink() ),
+		);
+	} elseif ( is_category() ) {
+		$cat     = get_queried_object();
+		$items[] = array(
+			'@type'    => 'ListItem',
+			'position' => $position++,
+			'name'     => esc_html( $cat->name ),
+			'item'     => esc_url( get_category_link( $cat->term_id ) ),
+		);
+	} elseif ( is_tag() ) {
+		$tag     = get_queried_object();
+		$items[] = array(
+			'@type'    => 'ListItem',
+			'position' => $position++,
+			'name'     => esc_html( $tag->name ),
+			'item'     => esc_url( get_tag_link( $tag->term_id ) ),
+		);
+	} elseif ( is_author() ) {
+		$author  = get_queried_object();
+		$items[] = array(
+			'@type'    => 'ListItem',
+			'position' => $position++,
+			'name'     => esc_html( $author->display_name ),
+			'item'     => esc_url( get_author_posts_url( $author->ID ) ),
+		);
+	} elseif ( is_page() && ! is_front_page() ) {
+		$items[] = array(
+			'@type'    => 'ListItem',
+			'position' => $position++,
+			'name'     => esc_html( get_the_title() ),
+			'item'     => esc_url( get_permalink() ),
+		);
+	}
+
+	if ( count( $items ) < 2 ) {
+		return;
+	}
+
+	$schema = array(
+		'@context'        => 'https://schema.org',
+		'@type'           => 'BreadcrumbList',
+		'itemListElement' => $items,
+	);
+	echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+}
+
+
+// ================================================================
+// EXTRACT REVIEW RATING — reads custom meta for star ratings
+// Posts can have: _soopercart_rating (1-5), _soopercart_rating_count
+// Used in BlogPosting schema to show review ratings to search engines
+// ================================================================
+function soopercart_get_post_rating( $post_id ) {
+	$rating = get_post_meta( $post_id, '_soopercart_rating', true );
+	$count  = get_post_meta( $post_id, '_soopercart_rating_count', true );
+
+	if ( $rating && $count ) {
+		return array(
+			'ratingValue' => floatval( $rating ),
+			'ratingCount' => intval( $count ),
+		);
+	}
+	return null;
+}
+
+
+// ================================================================
+// MAIN SEO HEAD FUNCTION
+// ================================================================
+function soopercart_seo_head() {
+
+	// ---------------------------------------------------------------
+	// ROBOTS — handle thin/duplicate page types first
+	// ---------------------------------------------------------------
+
+	if ( is_search() ) {
+		echo '<meta name="robots" content="noindex, follow">' . "\n";
+		// AI crawler directives on search pages — noindex for all
+		echo '<meta name="GPTBot" content="noindex">' . "\n";
+		echo '<meta name="ClaudeBot" content="noindex">' . "\n";
+		echo '<meta name="PerplexityBot" content="noindex">' . "\n";
+		return;
+	}
+
+	if ( is_404() ) {
+		echo '<meta name="robots" content="noindex, follow">' . "\n";
+		return;
+	}
+
+	if ( is_date() ) {
+		echo '<meta name="robots" content="noindex, follow">' . "\n";
+		return;
+	}
+
+	if ( is_paged() ) {
+		echo '<meta name="robots" content="noindex, follow">' . "\n";
+		return;
+	}
+
+	// All real content pages — full indexing directive
+	echo '<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">' . "\n";
+
+	// ---------------------------------------------------------------
+	// AI CRAWLER DIRECTIVES — May 2026
+	// Explicitly allow AI crawlers to index and cite content.
+	// ---------------------------------------------------------------
+	echo '<meta name="GPTBot" content="index">' . "\n";
+	echo '<meta name="ClaudeBot" content="index">' . "\n";
+	echo '<meta name="PerplexityBot" content="index">' . "\n";
+
+	// llms.txt reference — AI crawlers use this to understand site
+	echo '<link rel="llms" href="' . SOOPERCART_SITE_URL . '/llms.txt">' . "\n";
+
+	// --- Global OG meta (all real pages) ---
+	echo '<meta name="author" content="SooperCart">' . "\n";
+	echo '<meta property="og:site_name" content="SooperCart">' . "\n";
+	echo '<meta property="og:locale" content="en_US">' . "\n";
+
+	// ---------------------------------------------------------------
+	// HOMEPAGE
+	// ---------------------------------------------------------------
+	if ( is_front_page() ) {
+
+		// Open Graph
+		echo '<meta property="og:type" content="website">' . "\n";
+		echo '<meta property="og:title" content="Best Gadgets &amp; Honest Reviews | SooperCart">' . "\n";
+		echo '<meta property="og:description" content="Expert gadget reviews, honest product recommendations, and tech buying guides. Find the best technology solutions at SooperCart.">' . "\n";
+		echo '<meta property="og:url" content="' . SOOPERCART_SITE_URL . '/">' . "\n";
+		echo '<meta property="og:image" content="' . SOOPERCART_FALLBACK_SOCIAL_IMG . '">' . "\n";
+		echo '<meta property="og:image:type" content="image/webp">' . "\n";
+		echo '<meta property="og:image:width" content="1200">' . "\n";
+		echo '<meta property="og:image:height" content="630">' . "\n";
+		echo '<meta property="og:image:alt" content="SooperCart – Best Gadgets &amp; Honest Reviews">' . "\n";
+
+		// WebPage Schema
+		$hp_schema = array(
+			'@context'     => 'https://schema.org',
+			'@type'        => 'WebPage',
+			'name'         => 'Best Gadgets & Honest Reviews | SooperCart',
+			'url'          => SOOPERCART_SITE_URL . '/',
+			'description'  => 'Expert gadget reviews, honest product recommendations, and tech buying guides. Find the best technology solutions at SooperCart.',
+			'inLanguage'   => 'en-US',
+			'isPartOf'     => array(
+				'@type' => 'WebSite',
+				'name'  => 'SooperCart',
+				'url'   => SOOPERCART_SITE_URL,
+			),
+			'publisher'    => array(
+				'@type' => 'Organization',
+				'name'  => 'SooperCart',
+				'logo'  => array(
+					'@type' => 'ImageObject',
+					'url'   => SOOPERCART_LOGO_IMG,
+				),
+			),
+			'dateModified' => get_lastpostmodified( 'c' ),
+		);
+		echo '<script type="application/ld+json">' . wp_json_encode( $hp_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+
+		// Static schemas on homepage (cached)
+		echo soopercart_get_static_schemas();
+	}
+
+	// ---------------------------------------------------------------
+	// SINGLE POSTS (Reviews & Guides)
+	// ---------------------------------------------------------------
+	if ( is_single() ) {
+		global $post;
+
+		$post_url    = esc_url( get_permalink() );
+		$post_title  = esc_attr( get_the_title() );
+		$post_exc    = esc_attr( wp_strip_all_tags( get_the_excerpt() ) );
+		$thumb_id    = get_post_thumbnail_id( $post->ID );
+		$post_img    = get_the_post_thumbnail_url( $post->ID, 'large' );
+		$pub_date    = get_the_date( 'c' );
+		$mod_date    = get_the_modified_date( 'c' );
+		$author_obj  = get_userdata( $post->post_author );
+		$author_name = $author_obj ? esc_attr( $author_obj->display_name ) : 'SooperCart';
+		$author_url  = esc_url( get_author_posts_url( $post->post_author ) );
+
+		// Primary category
+		$cats        = get_the_category( $post->ID );
+		$primary_cat = ! empty( $cats ) ? esc_attr( $cats[0]->name ) : '';
+
+		// Post tags
+		$tags_list = get_the_tags( $post->ID );
+		$tag_names = array();
+		if ( $tags_list && ! is_wp_error( $tags_list ) ) {
+			foreach ( $tags_list as $t ) {
+				$tag_names[] = esc_attr( $t->name );
+			}
+		}
+
+		// Word count from raw content
+		$word_count = str_word_count( wp_strip_all_tags( $post->post_content ) );
+
+		// Real image dimensions for schema
+		$img_src      = $thumb_id ? wp_get_attachment_image_src( $thumb_id, 'large' ) : false;
+		$img_width    = $img_src ? (int) $img_src[1] : 1200;
+		$img_height   = $img_src ? (int) $img_src[2] : 630;
+
+		// Real mime type for og:image:type
+		$img_mime = soopercart_get_image_mime( $thumb_id );
+
+		// Open Graph
+		echo '<meta property="og:type" content="article">' . "\n";
+		echo '<meta property="og:title" content="' . $post_title . '">' . "\n";
+		echo '<meta property="og:description" content="' . $post_exc . '">' . "\n";
+		echo '<meta property="og:url" content="' . $post_url . '">' . "\n";
+		if ( $post_img ) {
+			echo '<meta property="og:image" content="' . esc_url( $post_img ) . '">' . "\n";
+			echo '<meta property="og:image:type" content="' . $img_mime . '">' . "\n";
+			echo '<meta property="og:image:width" content="' . $img_width . '">' . "\n";
+			echo '<meta property="og:image:height" content="' . $img_height . '">' . "\n";
+			echo '<meta property="og:image:alt" content="' . $post_title . '">' . "\n";
+		} else {
+			echo '<meta property="og:image" content="' . SOOPERCART_FALLBACK_SOCIAL_IMG . '">' . "\n";
+			echo '<meta property="og:image:type" content="image/webp">' . "\n";
+			echo '<meta property="og:image:width" content="1200">' . "\n";
+			echo '<meta property="og:image:height" content="630">' . "\n";
+			echo '<meta property="og:image:alt" content="SooperCart – Best Gadgets &amp; Honest Reviews">' . "\n";
+		}
+		echo '<meta property="article:published_time" content="' . $pub_date . '">' . "\n";
+		echo '<meta property="article:modified_time" content="' . $mod_date . '">' . "\n";
+		if ( $primary_cat ) {
+			echo '<meta property="article:section" content="' . $primary_cat . '">' . "\n";
+		}
+		foreach ( $tag_names as $tag ) {
+			echo '<meta property="article:tag" content="' . $tag . '">' . "\n";
+		}
+
+		// -------------------------------------------------------
+		// BlogPosting Schema — enhanced for product reviews
+		// -------------------------------------------------------
+
+		// Build author entity with gravatar
+		$author_entity = array(
+			'@type' => 'Person',
+			'name'  => $author_name,
+			'url'   => $author_url,
+		);
+		if ( $author_obj ) {
+			$author_entity['image'] = array(
+				'@type' => 'ImageObject',
+				'url'   => get_avatar_url( $author_obj->ID, array( 'size' => 300 ) ),
+			);
+			if ( $author_obj->user_url ) {
+				$author_entity['sameAs'] = array( esc_url( $author_obj->user_url ) );
+			}
+		}
+
+		// Build about array from post tags (gadget categories, product types)
+		$about_entities = array();
+		if ( ! empty( $tags_list ) && ! is_wp_error( $tags_list ) ) {
+			foreach ( $tags_list as $t ) {
+				$about_entities[] = array(
+					'@type' => 'Thing',
+					'name'  => $t->name,
+				);
+			}
+		}
+
+		// Speakable — marks headline + first paragraph for voice/AI
+		$speakable = array(
+			'@type'       => 'SpeakableSpecification',
+			'cssSelector' => array( '.post-title', '.entry-content p:first-of-type' ),
+		);
+
+		$article_schema = array(
+			'@context'         => 'https://schema.org',
+			'@type'            => 'BlogPosting',
+			'headline'         => get_the_title(),
+			'url'              => get_permalink(),
+			'datePublished'    => $pub_date,
+			'dateModified'     => $mod_date,
+			'wordCount'        => $word_count,
+			'inLanguage'       => 'en-US',
+			'author'           => $author_entity,
+			'publisher'        => array(
+				'@type' => 'Organization',
+				'name'  => 'SooperCart',
+				'logo'  => array(
+					'@type'  => 'ImageObject',
+					'url'    => SOOPERCART_LOGO_IMG,
+					'width'  => 1000,
+					'height' => 300,
+				),
+			),
+			'description'      => wp_strip_all_tags( get_the_excerpt() ),
+			'mainEntityOfPage' => array(
+				'@type' => 'WebPage',
+				'@id'   => get_permalink(),
+			),
+			'copyrightYear'    => get_the_date( 'Y' ),
+			'copyrightHolder'  => array(
+				'@type' => 'Organization',
+				'name'  => 'SooperCart',
+			),
+			'speakable'        => $speakable,
+			'accessMode'       => array( 'textual', 'visual' ),
+			'accessibilityFeature' => array( 'alternativeText', 'readingOrder' ),
+		);
+
+		// Keywords from post tags
+		if ( ! empty( $tag_names ) ) {
+			$article_schema['keywords'] = implode( ', ', array_map( 'wp_strip_all_tags', $tag_names ) );
+		}
+
+		// About — named entities from tags
+		if ( ! empty( $about_entities ) ) {
+			$article_schema['about'] = $about_entities;
+		}
+
+		// Image with real pixel dimensions
+		if ( $post_img ) {
+			$article_schema['image'] = array(
+				'@type'  => 'ImageObject',
+				'url'    => $post_img,
+				'width'  => $img_width,
+				'height' => $img_height,
+			);
+		}
+
+		// REVIEW RATING — if this is a review article with star rating
+		// Set via: add_post_meta($id, '_soopercart_rating', '4.5')
+		//         add_post_meta($id, '_soopercart_rating_count', '342')
+		$rating_data = soopercart_get_post_rating( $post->ID );
+		if ( $rating_data ) {
+			$article_schema['reviewRating'] = array(
+				'@type'       => 'Rating',
+				'ratingValue' => $rating_data['ratingValue'],
+				'bestRating'  => 5,
+				'worstRating' => 1,
+				'ratingCount' => $rating_data['ratingCount'],
+			);
+		}
+
+		// dateReviewed — reads custom meta field if editor fills it in
+		$reviewed_date = get_post_meta( $post->ID, '_soopercart_reviewed', true );
+		if ( $reviewed_date ) {
+			$article_schema['dateReviewed'] = esc_attr( $reviewed_date );
+			$article_schema['reviewedBy']   = array(
+				'@type' => 'Organization',
+				'name'  => 'SooperCart Editorial Team',
+			);
+		}
+
+		// citation — reads custom meta field for sourced articles/reviews
+		$sources_raw = get_post_meta( $post->ID, '_soopercart_sources', true );
+		if ( $sources_raw ) {
+			$source_urls = array_filter( array_map( 'trim', explode( '||', $sources_raw ) ) );
+			$citations   = array();
+			foreach ( $source_urls as $src_url ) {
+				$citations[] = array(
+					'@type' => 'CreativeWork',
+					'url'   => esc_url( $src_url ),
+				);
+			}
+			if ( ! empty( $citations ) ) {
+				$article_schema['citation'] = $citations;
+			}
+		}
+
+		echo '<script type="application/ld+json">' . wp_json_encode( $article_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+
+		// BreadcrumbList
+		soopercart_breadcrumb_schema();
+
+		// -----------------------------------------------------------
+		// FAQ / PAA SCHEMA — v4.0
+		// Scoped to FAQ sections and specs
+		// -----------------------------------------------------------
+		$faqs = soopercart_extract_faqs( $post->post_content );
+		if ( ! empty( $faqs ) ) {
+			$faq_entities = array();
+			foreach ( $faqs as $faq ) {
+				$faq_entities[] = array(
+					'@type'          => 'Question',
+					'name'           => $faq['question'],
+					'acceptedAnswer' => array(
+						'@type' => 'Answer',
+						'text'  => $faq['answer'],
+					),
+				);
+			}
+			$faq_schema = array(
+				'@context'   => 'https://schema.org',
+				'@type'      => 'FAQPage',
+				'mainEntity' => $faq_entities,
+			);
+			echo '<script type="application/ld+json">' . wp_json_encode( $faq_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+		}
+
+		// -----------------------------------------------------------
+		// Static schemas on posts (cached)
+		// -----------------------------------------------------------
+		echo soopercart_get_static_schemas();
+
+		// -----------------------------------------------------------
+		// LCP SPEED — preload featured image with responsive srcset
+		// -----------------------------------------------------------
+		if ( $post_img && $thumb_id ) {
+			$srcset = wp_get_attachment_image_srcset( $thumb_id, 'large' );
+			$sizes  = wp_get_attachment_image_sizes( $thumb_id, 'large' );
+			if ( $srcset && $sizes ) {
+				echo '<link rel="preload" as="image" fetchpriority="high"'
+					. ' href="' . esc_url( $post_img ) . '"'
+					. ' imagesrcset="' . esc_attr( $srcset ) . '"'
+					. ' imagesizes="' . esc_attr( $sizes ) . '">' . "\n";
+			} else {
+				echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( $post_img ) . '">' . "\n";
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// CATEGORY PAGES (Gadget Categories, Device Types)
+	// ---------------------------------------------------------------
+	if ( is_category() ) {
+		$cat_obj  = get_queried_object();
+		$cat_name = esc_attr( $cat_obj->name );
+		$cat_url  = esc_url( get_category_link( $cat_obj->term_id ) );
+		$cat_desc = strip_tags( $cat_obj->description );
+		$cat_og   = $cat_desc
+			? esc_attr( $cat_desc )
+			: 'Browse ' . $cat_name . ' reviews and guides at SooperCart – expert recommendations for the best gadgets.';
+
+		// Open Graph
+		echo '<meta property="og:type" content="website">' . "\n";
+		echo '<meta property="og:title" content="' . $cat_name . ' Reviews &amp; Guides | SooperCart">' . "\n";
+		echo '<meta property="og:description" content="' . $cat_og . '">' . "\n";
+		echo '<meta property="og:url" content="' . $cat_url . '">' . "\n";
+		echo '<meta property="og:image" content="' . SOOPERCART_FALLBACK_SOCIAL_IMG . '">' . "\n";
+		echo '<meta property="og:image:type" content="image/webp">' . "\n";
+		echo '<meta property="og:image:width" content="1200">' . "\n";
+		echo '<meta property="og:image:height" content="630">' . "\n";
+		echo '<meta property="og:image:alt" content="' . $cat_name . ' – SooperCart">' . "\n";
+
+		// CollectionPage schema for category archives
+		$collection_schema = array(
+			'@context'    => 'https://schema.org',
+			'@type'       => 'CollectionPage',
+			'name'        => $cat_name . ' Reviews & Guides | SooperCart',
+			'url'         => $cat_url,
+			'description' => wp_strip_all_tags( $cat_og ),
+			'inLanguage'  => 'en-US',
+			'isPartOf'    => array(
+				'@type' => 'WebSite',
+				'name'  => 'SooperCart',
+				'url'   => SOOPERCART_SITE_URL,
+			),
+		);
+		echo '<script type="application/ld+json">' . wp_json_encode( $collection_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+
+		soopercart_breadcrumb_schema();
+	}
+
+	// ---------------------------------------------------------------
+	// AUTHOR ARCHIVE
+	// ---------------------------------------------------------------
+	if ( is_author() ) {
+		$author    = get_queried_object();
+		$auth_name = esc_attr( $author->display_name );
+		$auth_url  = esc_url( get_author_posts_url( $author->ID ) );
+		$auth_bio  = esc_attr( wp_strip_all_tags( $author->description ) );
+		$auth_og   = $auth_bio ? $auth_bio : $auth_name . ' – Reviewer at SooperCart Gadget Reviews.';
+
+		// Open Graph
+		echo '<meta property="og:type" content="website">' . "\n";
+		echo '<meta property="og:title" content="' . $auth_name . ' | SooperCart">' . "\n";
+		echo '<meta property="og:description" content="' . $auth_og . '">' . "\n";
+		echo '<meta property="og:url" content="' . $auth_url . '">' . "\n";
+		echo '<meta property="og:image" content="' . SOOPERCART_FALLBACK_SOCIAL_IMG . '">' . "\n";
+		echo '<meta property="og:image:type" content="image/webp">' . "\n";
+		echo '<meta property="og:image:width" content="1200">' . "\n";
+		echo '<meta property="og:image:height" content="630">' . "\n";
+		echo '<meta property="og:image:alt" content="' . $auth_name . ' – SooperCart Reviewer">' . "\n";
+
+		// Person schema — full E-E-A-T entity
+		$gravatar_url  = get_avatar_url( $author->ID, array( 'size' => 300 ) );
+		$person_schema = array(
+			'@context'    => 'https://schema.org',
+			'@type'       => 'Person',
+			'name'        => $author->display_name,
+			'url'         => get_author_posts_url( $author->ID ),
+			'description' => wp_strip_all_tags( $author->description ),
+			'image'       => array(
+				'@type' => 'ImageObject',
+				'url'   => $gravatar_url,
+			),
+			'worksFor'    => array(
+				'@type' => 'Organization',
+				'name'  => 'SooperCart',
+				'url'   => SOOPERCART_SITE_URL,
+			),
+		);
+		if ( $author->user_url ) {
+			$person_schema['sameAs'] = array( esc_url( $author->user_url ) );
+		}
+		echo '<script type="application/ld+json">' . wp_json_encode( $person_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+
+		soopercart_breadcrumb_schema();
+	}
+
+	// ---------------------------------------------------------------
+	// TAG ARCHIVE
+	// ---------------------------------------------------------------
+	if ( is_tag() ) {
+		$tag_obj  = get_queried_object();
+		$tag_name = esc_attr( $tag_obj->name );
+		$tag_url  = esc_url( get_tag_link( $tag_obj->term_id ) );
+		$tag_desc = strip_tags( $tag_obj->description );
+		$tag_og   = $tag_desc
+			? esc_attr( $tag_desc )
+			: 'Articles tagged "' . $tag_name . '" – gadget reviews and tech insights at SooperCart.';
+
+		// Open Graph
+		echo '<meta property="og:type" content="website">' . "\n";
+		echo '<meta property="og:title" content="' . $tag_name . ' | SooperCart">' . "\n";
+		echo '<meta property="og:description" content="' . $tag_og . '">' . "\n";
+		echo '<meta property="og:url" content="' . $tag_url . '">' . "\n";
+		echo '<meta property="og:image" content="' . SOOPERCART_FALLBACK_SOCIAL_IMG . '">' . "\n";
+		echo '<meta property="og:image:type" content="image/webp">' . "\n";
+		echo '<meta property="og:image:width" content="1200">' . "\n";
+		echo '<meta property="og:image:height" content="630">' . "\n";
+		echo '<meta property="og:image:alt" content="' . $tag_name . ' – SooperCart">' . "\n";
+
+		// CollectionPage schema for tag archives
+		$tag_collection = array(
+			'@context'    => 'https://schema.org',
+			'@type'       => 'CollectionPage',
+			'name'        => $tag_name . ' | SooperCart',
+			'url'         => $tag_url,
+			'description' => wp_strip_all_tags( $tag_og ),
+			'inLanguage'  => 'en-US',
+			'isPartOf'    => array(
+				'@type' => 'WebSite',
+				'name'  => 'SooperCart',
+				'url'   => SOOPERCART_SITE_URL,
+			),
+		);
+		echo '<script type="application/ld+json">' . wp_json_encode( $tag_collection, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+
+		soopercart_breadcrumb_schema();
+	}
+
+	// ---------------------------------------------------------------
+	// STATIC PAGES (About, Buying Guides, Contact, Privacy)
+	// ---------------------------------------------------------------
+	if ( is_page() && ! is_front_page() ) {
+		global $post;
+		$page_url   = esc_url( get_permalink() );
+		$page_title = esc_attr( get_the_title() );
+		$page_exc   = esc_attr( wp_strip_all_tags( get_the_excerpt() ) );
+		$page_img   = get_the_post_thumbnail_url( $post->ID, 'large' );
+		$page_tid   = get_post_thumbnail_id( $post->ID );
+
+		// Open Graph
+		echo '<meta property="og:type" content="website">' . "\n";
+		echo '<meta property="og:title" content="' . $page_title . ' | SooperCart">' . "\n";
+		if ( $page_exc ) {
+			echo '<meta property="og:description" content="' . $page_exc . '">' . "\n";
+		}
+		echo '<meta property="og:url" content="' . $page_url . '">' . "\n";
+		if ( $page_img ) {
+			$page_mime = soopercart_get_image_mime( $page_tid );
+			echo '<meta property="og:image" content="' . esc_url( $page_img ) . '">' . "\n";
+			echo '<meta property="og:image:type" content="' . $page_mime . '">' . "\n";
+			echo '<meta property="og:image:alt" content="' . $page_title . ' – SooperCart">' . "\n";
+		} else {
+			echo '<meta property="og:image" content="' . SOOPERCART_FALLBACK_SOCIAL_IMG . '">' . "\n";
+			echo '<meta property="og:image:type" content="image/webp">' . "\n";
+			echo '<meta property="og:image:width" content="1200">' . "\n";
+			echo '<meta property="og:image:height" content="630">' . "\n";
+			echo '<meta property="og:image:alt" content="' . $page_title . ' – SooperCart">' . "\n";
+		}
+
+		soopercart_breadcrumb_schema();
+
+		// FAQ schema for static pages (buying guides, FAQs page, etc.)
+		$page_faqs = soopercart_extract_faqs( $post->post_content );
+		if ( ! empty( $page_faqs ) ) {
+			$faq_entities = array();
+			foreach ( $page_faqs as $faq ) {
+				$faq_entities[] = array(
+					'@type'          => 'Question',
+					'name'           => $faq['question'],
+					'acceptedAnswer' => array(
+						'@type' => 'Answer',
+						'text'  => $faq['answer'],
+					),
+				);
+			}
+			$faq_schema = array(
+				'@context'   => 'https://schema.org',
+				'@type'      => 'FAQPage',
+				'mainEntity' => $faq_entities,
+			);
+			echo '<script type="application/ld+json">' . wp_json_encode( $faq_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// SPEED — Preconnect & DNS Prefetch (all pages)
+	// ---------------------------------------------------------------
+	echo '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n";
+	echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n";
+	echo '<link rel="dns-prefetch" href="//fonts.googleapis.com">' . "\n";
+	echo '<link rel="dns-prefetch" href="//fonts.gstatic.com">' . "\n";
+	echo '<link rel="dns-prefetch" href="//www.google-analytics.com">' . "\n";
+	echo '<link rel="dns-prefetch" href="//www.googletagmanager.com">' . "\n";
+
+	// Logo preload only on non-post pages
+	if ( ! is_single() ) {
+		echo '<link rel="preload" as="image" fetchpriority="high" href="' . SOOPERCART_LOGO_IMG . '">' . "\n";
+	}
+
+	// Static schemas on all non-homepage, non-post pages (cached)
+	if ( ! is_front_page() && ! is_single() ) {
+		echo soopercart_get_static_schemas();
+	}
+}
+
+// ================================================================
+// AVADA — title tag and meta description
+// ================================================================
+// We do NOT hook pre_get_document_title.
+// We do NOT echo meta name="description" anywhere.
+// Avada SEO (Appearance > Theme Options > SEO) outputs both.
+// Ensure Avada SEO is ENABLED so it fires — zero conflict.
+// ================================================================
+
+// ================================================================
+// llms.txt SETUP FOR SOOPERCART
+// ================================================================
+// Create this file at https://soopercart.com/llms.txt
+// with content like:
+//
+// # SooperCart — Best Gadgets & Honest Reviews
+// > Expert gadget reviews, honest product recommendations, 
+// > tech news, and buying guides. Updated daily since 2019.
+//
+// ## Key sections
+// - Homepage: https://soopercart.com/
+// - Gadget Reviews: https://soopercart.com/category/gadgets/
+// - Tech News: https://soopercart.com/category/tech-news/
+// - Buying Guides: https://soopercart.com/category/buying-guides/
+// - About: https://soopercart.com/about/
+// - Contact: https://soopercart.com/contact/
+//
+// AI crawlers (ChatGPT, Perplexity, Claude, Gemini) read this file
+// to understand your site structure and cite you more accurately.
+// ================================================================
+?>
+<!DOCTYPE html>
+<html class="<?php avada_the_html_class(); ?>" <?php language_attributes(); ?>>
+<head>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<?php Avada()->head->the_viewport(); ?>
+
+	<?php wp_head(); ?>
+	<?php
+	echo apply_filters( 'avada_space_head', Avada()->settings->get( 'space_head' ) ); // phpcs:ignore WordPress.Security.EscapeOutput
+	?>
+</head>
+
+<?php
+$object_id      = get_queried_object_id();
+$c_page_id      = Avada()->fusion_library->get_page_id();
+$wrapper_class  = 'fusion-wrapper';
+$wrapper_class .= ( is_page_template( 'blank.php' ) ) ? ' wrapper_blank' : '';
+?>
+<body <?php body_class(); ?> <?php fusion_element_attributes( 'body' ); ?>>
+	<?php do_action( 'avada_before_body_content' ); ?>
+	<a class="skip-link screen-reader-text" href="#content"><?php esc_html_e( 'Skip to content', 'Avada' ); ?></a>
+
+	<div id="boxed-wrapper">
+		<?php if ( 'boxed' === Avada()->settings->get( 'layout' ) ) : ?>
+			<?php if ( 'framed' === Avada()->settings->get( 'scroll_offset' ) ) : ?>
+				<div class="fusion-sides-frame"></div>
+			<?php endif; ?>
+		<?php endif; ?>
+
+		<div id="wrapper" class="<?php echo esc_attr( $wrapper_class ); ?>">
+			<div id="home" style="position:relative;top:-1px;"></div>
+			<?php if ( apply_filters( 'awb_should_render_header', true, $c_page_id ) ) : ?>
+				<?php if ( has_action( 'avada_render_header' ) ) : ?>
+					<?php do_action( 'avada_render_header' ); ?>
+				<?php else : ?>
+					<?php avada_header_template( 'below', ( is_archive() || Avada_Helper::bbp_is_topic_tag() ) && ! ( class_exists( 'WooCommerce' ) && is_shop() ) ); ?>
+					<?php if ( 'left' === fusion_get_option( 'header_position' ) || 'right' === fusion_get_option( 'header_position' ) ) : ?>
+						<?php avada_side_header(); ?>
+					<?php endif; ?>
+					<?php avada_sliders_container(); ?>
+					<?php avada_header_template( 'above', ( is_archive() || Avada_Helper::bbp_is_topic_tag() ) && ! ( class_exists( 'WooCommerce' ) && is_shop() ) ); ?>
+				<?php endif; ?>
+			<?php endif; ?>
+
+			<?php avada_current_page_title_bar( $c_page_id ); ?>
+
+			<?php
+			$row_css    = '';
+			$main_class = '';
+			if ( apply_filters( 'fusion_is_hundred_percent_template', false, $c_page_id ) ) {
+				$row_css    = 'max-width:100%;';
+				$main_class = 'width-100';
+			}
+			if ( fusion_get_option( 'content_bg_full' ) && 'no' !== fusion_get_option( 'content_bg_full' ) ) {
+				$main_class .= ' full-bg';
+			}
+			do_action( 'avada_before_main_container' );
+			?>
+			<main id="main" class="clearfix <?php echo esc_attr( $main_class ); ?>">
+				<div class="fusion-row" style="<?php echo esc_attr( $row_css ); ?>"></document_content>
