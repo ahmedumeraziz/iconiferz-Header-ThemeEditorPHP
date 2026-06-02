@@ -1,960 +1,747 @@
 <?php
 /**
- * SooperCart — header.php (ALL-IN-ONE)
+ * SooperCart — header.php FINAL
  *
  * @package    Avada / SooperCart
- * @version    5.0 — May 2026
+ * @version    9.0 — June 2026
  *
- * ================================================================
- * HOW TO USE THIS FILE
- * ================================================================
- * 1. Go to: Appearance → Theme Editor → header.php
- * 2. Select ALL existing content and DELETE it
- * 3. Paste this entire file
- * 4. Click "Update File"
+ * ════════════════════════════════════════════════════════════════
+ * HOW TO INSTALL — UPLOAD VIA FILE MANAGER (NOT THEME EDITOR)
+ * ════════════════════════════════════════════════════════════════
+ * 1. cPanel → File Manager → public_html → wp-content → themes
+ * 2. Open your child theme folder (NOT the "Avada" folder)
+ *    Common names: Avada-Child-Theme / avada-child / child-theme
+ * 3. Upload this file as "header.php" — overwrite if it exists
+ * 4. Clear all caches (see below)
  *
- * That's it. No changes needed to functions.php.
- * This single file contains everything:
- *   • All SEO PHP functions (registered via add_action)
- *   • The Avada HTML header template
+ * ════════════════════════════════════════════════════════════════
+ * REQUIRED AVADA SETTING
+ * ════════════════════════════════════════════════════════════════
+ * Appearance → Theme Options → SEO → Open Graph → OFF
+ * (stops Avada from outputting duplicate OG tags)
+ * Keep title tag and meta description ON — we never touch those.
  *
- * ================================================================
- * WHAT THIS FILE HANDLES
- * ================================================================
- * ✅ Open Graph tags (og:type, og:title, og:description, og:image …)
- * ✅ Schema.org JSON-LD: Organization, WebSite, WebPage,
- *    BlogPosting, CollectionPage, BreadcrumbList, FAQPage, Person
- * ✅ Review / Rating schema (via custom post meta)
- * ✅ AI crawler signals: GPTBot, ClaudeBot, PerplexityBot + llms.txt
- * ✅ LCP featured-image preload with responsive srcset
- * ✅ Preconnect / DNS-prefetch speed hints
- * ✅ Robots meta (noindex for search/404/date/paged pages)
- * ✅ WP transient caching for static schemas (12-hour TTL)
- * ✅ Full Avada HTML template (unchanged from Avada default)
+ * ════════════════════════════════════════════════════════════════
+ * CLEAR CACHE AFTER UPLOADING
+ * ════════════════════════════════════════════════════════════════
+ * Appearance → Theme Options → scroll to bottom → Clear Cache
+ * + any caching plugin (WP Rocket / LiteSpeed / W3TC) → Purge All
  *
- * ================================================================
- * WHAT AVADA STILL HANDLES (do NOT duplicate these)
- * ================================================================
- * 🚫 <title> tag          — Avada SEO (Theme Options › SEO)
- * 🚫 meta name=description — Avada SEO (Theme Options › SEO)
- * Make sure Avada SEO is ENABLED in Theme Options › SEO.
- * Also turn OFF Avada's "Open Graph" toggle there — this file
- * outputs all OG tags itself to prevent duplicates.
- *
- * ================================================================
- * OPTIONAL CUSTOM POST FIELDS (set via WP custom fields UI)
- * ================================================================
- * _sc_rating         → float  e.g. "4.5"   (star rating 1–5)
- * _sc_rating_count   → int    e.g. "342"   (number of ratings)
- * _sc_reviewed       → string e.g. "2026-05-01" (date reviewed)
- * _sc_sources        → string e.g. "https://a.com||https://b.com"
- *
- * ================================================================
- * CUSTOMISE — edit the CONSTANTS block below only
- * ================================================================
+ * ════════════════════════════════════════════════════════════════
+ * OPTIONAL POST CUSTOM FIELDS (set per post in WP Admin)
+ * ════════════════════════════════════════════════════════════════
+ * _sc_rating         → "4.5"           star rating 1–5
+ * _sc_rating_count   → "342"           number of ratings
+ * _sc_reviewed       → "2026-05-01"    date reviewed (YYYY-MM-DD)
+ * _sc_sources        → "url1||url2"    pipe-separated citations
  */
 
-// Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit( 'Direct script access denied.' );
 }
 
-// ================================================================
-// ① GUARD — safe against double-inclusion (Avada edge cases)
-// ================================================================
-if ( defined( 'SC_SEO_LOADED' ) ) {
-	// Functions already registered — jump straight to HTML output.
-	goto sc_html_output;
-}
-define( 'SC_SEO_LOADED', true );
+// ════════════════════════════════════════════════════════════════
+// CONSTANTS — edit only this block when any URL changes
+// ════════════════════════════════════════════════════════════════
+if ( ! defined( 'SC_SOCIAL_IMG' ) )  { define( 'SC_SOCIAL_IMG',  'https://soopercart.com/wp-content/uploads/social-share.webp' ); }
+if ( ! defined( 'SC_LOGO_IMG' ) )    { define( 'SC_LOGO_IMG',    'https://soopercart.com/wp-content/uploads/2026/04/cropped-SooperCart-Best-Gadgets-Honest-Reviews-Favicon.webp' ); }
+if ( ! defined( 'SC_SITE_URL' ) )    { define( 'SC_SITE_URL',    'https://soopercart.com' ); }
+if ( ! defined( 'SC_SITE_NAME' ) )   { define( 'SC_SITE_NAME',   'SooperCart' ); }
+if ( ! defined( 'SC_TAGLINE' ) )     { define( 'SC_TAGLINE',     'Best Gadgets & Honest Reviews' ); }
+if ( ! defined( 'SC_EMAIL' ) )       { define( 'SC_EMAIL',       'info@soopercart.com' ); }
+if ( ! defined( 'SC_TWITTER' ) )     { define( 'SC_TWITTER',     '@soopercart_' ); }
+if ( ! defined( 'SC_AUTHOR_URL' ) )  { define( 'SC_AUTHOR_URL',  'https://soopercart.com/author/ahmedumeraziz/' ); }
+if ( ! defined( 'SC_AUTHOR_NAME' ) ) { define( 'SC_AUTHOR_NAME', 'Ahmed UA.' ); }
 
-
-// ================================================================
-// ② CONSTANTS — edit ONLY this block when your URLs change
-// ================================================================
-define( 'SC_SOCIAL_IMG',   'https://soopercart.com/wp-content/uploads/social-share.webp' );
-define( 'SC_LOGO_IMG',     'https://soopercart.com/wp-content/uploads/2026/04/cropped-SooperCart-Best-Gadgets-Honest-Reviews-Favicon.webp' );
-define( 'SC_SITE_URL',     'https://soopercart.com' );
-define( 'SC_SITE_NAME',    'SooperCart' );
-define( 'SC_SITE_TAGLINE', 'Best Gadgets & Honest Reviews' );
-define( 'SC_EMAIL',        'info@soopercart.com' );
-
-
-// ================================================================
-// ③ HELPER — get real mime type for og:image:type
-//    Falls back to image/webp for the static fallback banner.
-// ================================================================
-function sc_image_mime( $attachment_id = 0 ) {
-	if ( $attachment_id ) {
-		$mime = get_post_mime_type( $attachment_id );
-		if ( $mime ) {
-			return esc_attr( $mime );
+// ════════════════════════════════════════════════════════════════
+// HELPER — real MIME type for og:image:type
+// ════════════════════════════════════════════════════════════════
+if ( ! function_exists( 'sc_image_mime' ) ) {
+	function sc_image_mime( $attachment_id = 0 ) {
+		if ( $attachment_id ) {
+			$mime = get_post_mime_type( $attachment_id );
+			if ( $mime ) { return esc_attr( $mime ); }
 		}
+		return 'image/webp';
 	}
-	return 'image/webp';
 }
 
+// ════════════════════════════════════════════════════════════════
+// HELPER — Organization + WebSite JSON-LD (12-hour transient)
+// ════════════════════════════════════════════════════════════════
+if ( ! function_exists( 'sc_static_schemas' ) ) {
+	function sc_static_schemas() {
+		$key    = 'sc_schemas_v7';
+		$cached = get_transient( $key );
+		if ( $cached ) { return $cached; }
 
-// ================================================================
-// ④ HELPER — WP transient cache for Organization + WebSite JSON
-//    Rebuilt at most every 12 hours, or instantly on any post save.
-//    Returns a ready-to-echo HTML string of two <script> blocks.
-// ================================================================
-function sc_static_schemas() {
-	$cache_key = 'sc_static_schemas_v3';
-	$cached    = get_transient( $cache_key );
-	if ( $cached ) {
-		return $cached;
-	}
-
-	$org = array(
-		'@context'      => 'https://schema.org',
-		'@type'         => 'Organization',
-		'@id'           => SC_SITE_URL . '/#organization',
-		'name'          => SC_SITE_NAME,
-		'alternateName' => SC_SITE_NAME . ' - ' . SC_SITE_TAGLINE,
-		'url'           => SC_SITE_URL,
-		'logo'          => array(
-			'@type'  => 'ImageObject',
-			'url'    => SC_LOGO_IMG,
-			'width'  => 1000,
-			'height' => 300,
-		),
-		'description'   => 'SooperCart provides expert gadget reviews, honest product recommendations, tech news, and buying guides for consumers looking for the best tech solutions.',
-		'foundingDate'  => '2019',
-		'email'         => SC_EMAIL,
-		'sameAs'        => array(
-			'https://www.facebook.com/SooperCartOfficial',
-			'https://www.instagram.com/soopercart_',
-			'https://www.linkedin.com/company/soopercartofficial',
-			'https://bsky.app/profile/soopercart.bsky.social',
-			'https://www.threads.com/@soopercart_',
-		),
-		'contactPoint'  => array(
-			'@type'       => 'ContactPoint',
-			'email'       => SC_EMAIL,
-			'contactType' => 'editorial',
-		),
-	);
-
-	$site = array(
-		'@context'        => 'https://schema.org',
-		'@type'           => 'WebSite',
-		'@id'             => SC_SITE_URL . '/#website',
-		'name'            => SC_SITE_NAME,
-		'url'             => SC_SITE_URL,
-		'description'     => SC_SITE_TAGLINE . ' – Expert Tech Recommendations and Buying Guides',
-		'inLanguage'      => 'en-US',
-		'publisher'       => array( '@id' => SC_SITE_URL . '/#organization' ),
-		'potentialAction' => array(
-			'@type'       => 'SearchAction',
-			'target'      => array(
-				'@type'       => 'EntryPoint',
-				'urlTemplate' => SC_SITE_URL . '/?s={search_term_string}',
+		$org = array(
+			'@context'      => 'https://schema.org',
+			'@type'         => 'Organization',
+			'@id'           => SC_SITE_URL . '/#organization',
+			'name'          => SC_SITE_NAME,
+			'alternateName' => SC_SITE_NAME . ' - ' . SC_TAGLINE,
+			'url'           => SC_SITE_URL,
+			'logo'          => array(
+				'@type'  => 'ImageObject',
+				'url'    => SC_LOGO_IMG,
+				'width'  => 1000,
+				'height' => 300,
 			),
-			'query-input' => 'required name=search_term_string',
-		),
-	);
+			'description'  => 'SooperCart provides expert gadget reviews, honest product recommendations, tech news, and buying guides for consumers looking for the best tech solutions.',
+			'foundingDate' => '2019',
+			'email'        => SC_EMAIL,
+			'sameAs'       => array(
+				'https://www.facebook.com/SooperCartOfficial',
+				'https://www.instagram.com/soopercart_',
+				'https://www.linkedin.com/company/soopercartofficial',
+				'https://bsky.app/profile/soopercart.bsky.social',
+				'https://www.threads.com/@soopercart_',
+			),
+			'contactPoint' => array(
+				'@type'       => 'ContactPoint',
+				'email'       => SC_EMAIL,
+				'contactType' => 'editorial',
+			),
+		);
 
-	$output  = '<script type="application/ld+json">' . wp_json_encode( $org,  JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
-	$output .= '<script type="application/ld+json">' . wp_json_encode( $site, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+		$site = array(
+			'@context'        => 'https://schema.org',
+			'@type'           => 'WebSite',
+			'@id'             => SC_SITE_URL . '/#website',
+			'name'            => SC_SITE_NAME,
+			'url'             => SC_SITE_URL,
+			'description'     => SC_TAGLINE . ' – Expert Tech Recommendations and Buying Guides',
+			'inLanguage'      => 'en-US',
+			'publisher'       => array( '@id' => SC_SITE_URL . '/#organization' ),
+			'potentialAction' => array(
+				'@type'       => 'SearchAction',
+				'target'      => array(
+					'@type'       => 'EntryPoint',
+					'urlTemplate' => SC_SITE_URL . '/?s={search_term_string}',
+				),
+				'query-input' => 'required name=search_term_string',
+			),
+		);
 
-	set_transient( $cache_key, $output, 12 * HOUR_IN_SECONDS );
-	return $output;
+		$out  = '<script type="application/ld+json">' . wp_json_encode( $org,  JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+		$out .= '<script type="application/ld+json">' . wp_json_encode( $site, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+		set_transient( $key, $out, 12 * HOUR_IN_SECONDS );
+		return $out;
+	}
+}
+add_action( 'save_post',          function() { delete_transient( 'sc_schemas_v7' ); } );
+add_action( 'avada_save_options', function() { delete_transient( 'sc_schemas_v7' ); } );
+
+// ════════════════════════════════════════════════════════════════
+// HELPER — BreadcrumbList schema
+// ════════════════════════════════════════════════════════════════
+if ( ! function_exists( 'sc_breadcrumb_schema' ) ) {
+	function sc_breadcrumb_schema() {
+		$items = array();
+		$pos   = 1;
+		$items[] = array( '@type' => 'ListItem', 'position' => $pos++, 'name' => 'Home', 'item' => home_url( '/' ) );
+
+		if ( is_single() ) {
+			$cats = get_the_category();
+			if ( ! empty( $cats ) ) {
+				$items[] = array( '@type' => 'ListItem', 'position' => $pos++, 'name' => esc_html( $cats[0]->name ), 'item' => esc_url( get_category_link( $cats[0]->term_id ) ) );
+			}
+			$items[] = array( '@type' => 'ListItem', 'position' => $pos++, 'name' => esc_html( get_the_title() ), 'item' => esc_url( get_permalink() ) );
+		} elseif ( is_category() ) {
+			$cat = get_queried_object();
+			$items[] = array( '@type' => 'ListItem', 'position' => $pos++, 'name' => esc_html( $cat->name ), 'item' => esc_url( get_category_link( $cat->term_id ) ) );
+		} elseif ( is_tag() ) {
+			$tag = get_queried_object();
+			$items[] = array( '@type' => 'ListItem', 'position' => $pos++, 'name' => esc_html( $tag->name ), 'item' => esc_url( get_tag_link( $tag->term_id ) ) );
+		} elseif ( is_author() ) {
+			$author = get_queried_object();
+			$items[] = array( '@type' => 'ListItem', 'position' => $pos++, 'name' => esc_html( $author->display_name ), 'item' => esc_url( get_author_posts_url( $author->ID ) ) );
+		} elseif ( is_page() && ! is_front_page() ) {
+			$items[] = array( '@type' => 'ListItem', 'position' => $pos++, 'name' => esc_html( get_the_title() ), 'item' => esc_url( get_permalink() ) );
+		}
+
+		if ( count( $items ) < 2 ) { return; }
+		$schema = array( '@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $items );
+		echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+	}
 }
 
-// Clear the schema cache whenever any post is saved or Avada options are updated.
-add_action( 'save_post', function() { delete_transient( 'sc_static_schemas_v3' ); } );
-add_action( 'avada_save_options', function() { delete_transient( 'sc_static_schemas_v3' ); } );
-
-
-// ================================================================
-// ⑤ HELPER — BreadcrumbList schema
-//    Echoes a <script> tag directly. Returns nothing.
-//    Covers: single posts, categories, tags, authors, static pages.
-// ================================================================
-function sc_breadcrumb_schema() {
-	$items    = array();
-	$position = 1;
-
-	// Home is always the first item
-	$items[] = array(
-		'@type'    => 'ListItem',
-		'position' => $position++,
-		'name'     => 'Home',
-		'item'     => home_url( '/' ),
-	);
-
-	if ( is_single() ) {
-		$cats = get_the_category();
-		if ( ! empty( $cats ) ) {
-			$items[] = array(
-				'@type'    => 'ListItem',
-				'position' => $position++,
-				'name'     => esc_html( $cats[0]->name ),
-				'item'     => esc_url( get_category_link( $cats[0]->term_id ) ),
-			);
+// ════════════════════════════════════════════════════════════════
+// HELPER — extract plain text from <p> tags in HTML fragment
+// ════════════════════════════════════════════════════════════════
+if ( ! function_exists( 'sc_para_text' ) ) {
+	function sc_para_text( $html ) {
+		$parts = array();
+		if ( preg_match_all( '/<p[^>]*>([\s\S]*?)<\/p>/i', $html, $m ) ) {
+			foreach ( $m[1] as $p ) {
+				$t = trim( wp_strip_all_tags( $p ) );
+				if ( $t ) { $parts[] = $t; }
+			}
 		}
-		$items[] = array(
-			'@type'    => 'ListItem',
-			'position' => $position++,
-			'name'     => esc_html( get_the_title() ),
-			'item'     => esc_url( get_permalink() ),
-		);
-
-	} elseif ( is_category() ) {
-		$cat     = get_queried_object();
-		$items[] = array(
-			'@type'    => 'ListItem',
-			'position' => $position++,
-			'name'     => esc_html( $cat->name ),
-			'item'     => esc_url( get_category_link( $cat->term_id ) ),
-		);
-
-	} elseif ( is_tag() ) {
-		$tag     = get_queried_object();
-		$items[] = array(
-			'@type'    => 'ListItem',
-			'position' => $position++,
-			'name'     => esc_html( $tag->name ),
-			'item'     => esc_url( get_tag_link( $tag->term_id ) ),
-		);
-
-	} elseif ( is_author() ) {
-		$author  = get_queried_object();
-		$items[] = array(
-			'@type'    => 'ListItem',
-			'position' => $position++,
-			'name'     => esc_html( $author->display_name ),
-			'item'     => esc_url( get_author_posts_url( $author->ID ) ),
-		);
-
-	} elseif ( is_page() && ! is_front_page() ) {
-		$items[] = array(
-			'@type'    => 'ListItem',
-			'position' => $position++,
-			'name'     => esc_html( get_the_title() ),
-			'item'     => esc_url( get_permalink() ),
-		);
+		if ( empty( $parts ) ) {
+			$t = trim( wp_strip_all_tags( $html ) );
+			if ( $t ) { $parts[] = $t; }
+		}
+		return implode( ' ', $parts );
 	}
-
-	// Must have at least Home + one more item to be valid
-	if ( count( $items ) < 2 ) {
-		return;
-	}
-
-	$schema = array(
-		'@context'        => 'https://schema.org',
-		'@type'           => 'BreadcrumbList',
-		'itemListElement' => $items,
-	);
-	echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
 }
 
+// ════════════════════════════════════════════════════════════════
+// HELPER — auto-detect FAQ pairs (4 methods)
+//  1. Gutenberg: H2 FAQ/Specs section → H3/H4 questions ending ?
+//  2. Classic Editor: <p><strong>Question?</strong></p>
+//  3. Definition list: <dt>Question?</dt><dd>Answer</dd>
+//  4. WP 6.3+ accordion: <details><summary>Question?</summary>
+// ════════════════════════════════════════════════════════════════
+if ( ! function_exists( 'sc_extract_faqs' ) ) {
+	function sc_extract_faqs( $content ) {
+		$faqs     = array();
+		$rendered = function_exists( 'do_blocks' ) ? do_blocks( $content ) : $content;
+		$faq_kw   = array( 'faq', 'frequently asked', 'common question', 'question', 'spec', 'specification', 'buying guide' );
 
-// ================================================================
-// ⑥ HELPER — collect <p> text from an HTML fragment
-//    Internal utility used by sc_extract_faqs().
-//    Falls back to raw stripped text if no <p> tags are found.
-// ================================================================
-function sc_collect_p_text( $html ) {
-	$parts = array();
-	if ( preg_match_all( '/<p[^>]*>([\s\S]*?)<\/p>/i', $html, $pm ) ) {
-		foreach ( $pm[1] as $p ) {
-			$part = trim( wp_strip_all_tags( $p ) );
-			if ( $part ) {
-				$parts[] = $part;
-			}
-		}
-	}
-	// Fallback — grab any visible text when there are no <p> tags
-	if ( empty( $parts ) ) {
-		$plain = trim( wp_strip_all_tags( $html ) );
-		if ( $plain ) {
-			$parts[] = $plain;
-		}
-	}
-	return implode( ' ', $parts );
-}
-
-
-// ================================================================
-// ⑦ HELPER — FAQ auto-detection
-//    Scans raw post content for Q&A pairs using 4 methods:
-//
-//    METHOD 1 — Gutenberg: FAQ / Specs / Buying Guide H2 section
-//               → H3 / H4 sub-headings that end with "?"
-//    METHOD 2 — Classic Editor: <p><strong>Question?</strong></p>
-//    METHOD 3 — Definition list: <dt>Question?</dt><dd>Answer</dd>
-//    METHOD 4 — WP 6.3+ accordion: <details><summary>Question?
-//
-//    Returns array of ['question' => string, 'answer' => string].
-//    Deduplicates by question text.
-// ================================================================
-function sc_extract_faqs( $post_content ) {
-	$faqs = array();
-
-	// Render Gutenberg blocks into clean HTML first
-	$rendered = function_exists( 'do_blocks' ) ? do_blocks( $post_content ) : $post_content;
-
-	// Keywords that mark an H2 section as FAQ-worthy
-	$faq_keywords = array(
-		'faq', 'frequently asked', 'common question',
-		'question', 'spec', 'specification', 'buying guide',
-	);
-
-	// ----------------------------------------------------------
-	// METHOD 1 — Scoped to FAQ / Specs / Buying Guide H2 sections
-	// ----------------------------------------------------------
-	$h2_sections = preg_split( '/<h2[^>]*>[\s\S]*?<\/h2>/i', $rendered );
-	preg_match_all( '/<h2[^>]*>([\s\S]*?)<\/h2>/i', $rendered, $h2_matches, PREG_SET_ORDER );
-
-	foreach ( $h2_matches as $idx => $h2_match ) {
-		$h2_text = strtolower( trim( wp_strip_all_tags( $h2_match[1] ) ) );
-		$is_faq  = false;
-		foreach ( $faq_keywords as $kw ) {
-			if ( strpos( $h2_text, $kw ) !== false ) {
-				$is_faq = true;
-				break;
-			}
-		}
-		if ( ! $is_faq ) {
-			continue;
-		}
-
-		$section_body = isset( $h2_sections[ $idx + 1 ] ) ? $h2_sections[ $idx + 1 ] : '';
-		if ( empty( $section_body ) ) {
-			continue;
-		}
-
-		if ( preg_match_all(
-			'/<h[3-4][^>]*>([\s\S]*?)<\/h[3-4]>([\s\S]*?)(?=<h[2-4]|$)/i',
-			$section_body,
-			$q_matches,
-			PREG_SET_ORDER
-		) ) {
-			foreach ( $q_matches as $qm ) {
-				$question = trim( wp_strip_all_tags( $qm[1] ) );
-				// Strip "Q1.", "Q1:", "Q1)" style prefixes
-				$question = preg_replace( '/^Q\d+[\.\:\)]\s*/i', '', $question );
-				if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) {
-					continue;
-				}
-				$answer = sc_collect_p_text( $qm[2] );
-				if ( $answer ) {
-					$faqs[] = array( 'question' => $question, 'answer' => $answer );
+		// Method 1
+		$h2_parts = preg_split( '/<h2[^>]*>[\s\S]*?<\/h2>/i', $rendered );
+		preg_match_all( '/<h2[^>]*>([\s\S]*?)<\/h2>/i', $rendered, $h2m, PREG_SET_ORDER );
+		foreach ( $h2m as $idx => $hm ) {
+			$h2_text = strtolower( trim( wp_strip_all_tags( $hm[1] ) ) );
+			$ok = false;
+			foreach ( $faq_kw as $kw ) { if ( strpos( $h2_text, $kw ) !== false ) { $ok = true; break; } }
+			if ( ! $ok || empty( $h2_parts[ $idx + 1 ] ) ) { continue; }
+			if ( preg_match_all( '/<h[3-4][^>]*>([\s\S]*?)<\/h[3-4]>([\s\S]*?)(?=<h[2-4]|$)/i', $h2_parts[ $idx + 1 ], $qm, PREG_SET_ORDER ) ) {
+				foreach ( $qm as $q ) {
+					$question = preg_replace( '/^Q\d+[\.\:\)]\s*/i', '', trim( wp_strip_all_tags( $q[1] ) ) );
+					if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) { continue; }
+					$answer = sc_para_text( $q[2] );
+					if ( $answer ) { $faqs[] = array( 'question' => $question, 'answer' => $answer ); }
 				}
 			}
 		}
-	}
 
-	// ----------------------------------------------------------
-	// METHOD 2 — Classic Editor <p><strong>Question?</strong></p>
-	// ----------------------------------------------------------
-	if ( empty( $faqs ) ) {
-		if ( preg_match_all(
-			'/<p[^>]*>\s*<strong[^>]*>([\s\S]*?)<\/strong>\s*<\/p>([\s\S]*?)(?=<p[^>]*>\s*<strong|$)/i',
-			$rendered,
-			$matches,
-			PREG_SET_ORDER
-		) ) {
-			foreach ( $matches as $m ) {
-				$question = trim( wp_strip_all_tags( $m[1] ) );
-				$question = preg_replace( '/^Q\d+[\.\:\)]\s*/i', '', $question );
-				if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) {
-					continue;
-				}
-				$answer = sc_collect_p_text( $m[2] );
-				if ( $answer ) {
-					$faqs[] = array( 'question' => $question, 'answer' => $answer );
-				}
+		// Method 2
+		if ( empty( $faqs ) && preg_match_all( '/<p[^>]*>\s*<strong[^>]*>([\s\S]*?)<\/strong>\s*<\/p>([\s\S]*?)(?=<p[^>]*>\s*<strong|$)/i', $rendered, $m, PREG_SET_ORDER ) ) {
+			foreach ( $m as $row ) {
+				$question = preg_replace( '/^Q\d+[\.\:\)]\s*/i', '', trim( wp_strip_all_tags( $row[1] ) ) );
+				if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) { continue; }
+				$answer = sc_para_text( $row[2] );
+				if ( $answer ) { $faqs[] = array( 'question' => $question, 'answer' => $answer ); }
 			}
 		}
-	}
 
-	// ----------------------------------------------------------
-	// METHOD 3 — Definition list <dt>Question?</dt><dd>Answer</dd>
-	// ----------------------------------------------------------
-	if ( empty( $faqs ) ) {
-		if ( preg_match_all(
-			'/<dt[^>]*>([\s\S]*?)<\/dt>[\s\S]{0,300}?<dd[^>]*>([\s\S]*?)<\/dd>/i',
-			$rendered,
-			$matches,
-			PREG_SET_ORDER
-		) ) {
-			foreach ( $matches as $m ) {
-				$question = trim( wp_strip_all_tags( $m[1] ) );
-				$answer   = trim( wp_strip_all_tags( $m[2] ) );
+		// Method 3
+		if ( empty( $faqs ) && preg_match_all( '/<dt[^>]*>([\s\S]*?)<\/dt>[\s\S]{0,300}?<dd[^>]*>([\s\S]*?)<\/dd>/i', $rendered, $m, PREG_SET_ORDER ) ) {
+			foreach ( $m as $row ) {
+				$question = trim( wp_strip_all_tags( $row[1] ) );
+				$answer   = trim( wp_strip_all_tags( $row[2] ) );
 				if ( $question && $answer && '?' === substr( rtrim( $question ), -1 ) ) {
 					$faqs[] = array( 'question' => $question, 'answer' => $answer );
 				}
 			}
 		}
-	}
 
-	// ----------------------------------------------------------
-	// METHOD 4 — WP 6.3+ <details><summary>Question?</summary>
-	// ----------------------------------------------------------
-	if ( empty( $faqs ) ) {
-		if ( preg_match_all(
-			'/<details[^>]*>[\s\S]{0,200}?<summary[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/i',
-			$rendered,
-			$matches,
-			PREG_SET_ORDER
-		) ) {
-			foreach ( $matches as $m ) {
-				$question = trim( wp_strip_all_tags( $m[1] ) );
-				if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) {
-					continue;
-				}
-				$answer = sc_collect_p_text( $m[2] );
-				if ( $answer ) {
-					$faqs[] = array( 'question' => $question, 'answer' => $answer );
-				}
+		// Method 4
+		if ( empty( $faqs ) && preg_match_all( '/<details[^>]*>[\s\S]{0,200}?<summary[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/i', $rendered, $m, PREG_SET_ORDER ) ) {
+			foreach ( $m as $row ) {
+				$question = trim( wp_strip_all_tags( $row[1] ) );
+				if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) { continue; }
+				$answer = sc_para_text( $row[2] );
+				if ( $answer ) { $faqs[] = array( 'question' => $question, 'answer' => $answer ); }
 			}
 		}
-	}
 
-	// Deduplicate by question text
-	$seen  = array();
-	$clean = array();
-	foreach ( $faqs as $faq ) {
-		$key = md5( $faq['question'] );
-		if ( ! isset( $seen[ $key ] ) ) {
-			$seen[ $key ] = true;
-			$clean[]      = $faq;
+		// Deduplicate
+		$seen = array(); $clean = array();
+		foreach ( $faqs as $f ) {
+			$k = md5( $f['question'] );
+			if ( ! isset( $seen[$k] ) ) { $seen[$k] = true; $clean[] = $f; }
 		}
+		return $clean;
 	}
-
-	return $clean;
 }
 
-
-// ================================================================
-// ⑧ HELPER — read star rating from custom post meta
-//    Returns array or null.
-//    Set via WP Admin › Custom Fields:
-//      _sc_rating       → e.g. "4.5"
-//      _sc_rating_count → e.g. "342"
-// ================================================================
-function sc_get_rating( $post_id ) {
-	$rating = get_post_meta( $post_id, '_sc_rating', true );
-	$count  = get_post_meta( $post_id, '_sc_rating_count', true );
-	if ( $rating && $count ) {
-		return array(
-			'ratingValue' => floatval( $rating ),
-			'ratingCount' => intval( $count ),
-		);
+// ════════════════════════════════════════════════════════════════
+// HELPER — output FAQPage JSON-LD block
+// ════════════════════════════════════════════════════════════════
+if ( ! function_exists( 'sc_output_faq_schema' ) ) {
+	function sc_output_faq_schema( $content ) {
+		$faqs = sc_extract_faqs( $content );
+		if ( empty( $faqs ) ) { return; }
+		$entities = array();
+		foreach ( $faqs as $f ) {
+			$entities[] = array(
+				'@type'          => 'Question',
+				'name'           => $f['question'],
+				'acceptedAnswer' => array( '@type' => 'Answer', 'text' => $f['answer'] ),
+			);
+		}
+		$schema = array( '@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => $entities );
+		echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
 	}
-	return null;
 }
 
+// ════════════════════════════════════════════════════════════════
+// HELPER — star rating from custom post meta
+// ════════════════════════════════════════════════════════════════
+if ( ! function_exists( 'sc_get_rating' ) ) {
+	function sc_get_rating( $post_id ) {
+		$r = get_post_meta( $post_id, '_sc_rating',       true );
+		$c = get_post_meta( $post_id, '_sc_rating_count', true );
+		if ( $r && $c ) { return array( 'ratingValue' => floatval( $r ), 'ratingCount' => intval( $c ) ); }
+		return null;
+	}
+}
 
-// ================================================================
-// ⑨ MAIN SEO HEAD — hooked into wp_head at priority 1
-//    Priority 1 = fires before Avada and all plugins.
-//    Avada outputs <title> and meta description — we never touch
-//    those. Everything else is output here.
-// ================================================================
+// ════════════════════════════════════════════════════════════════
+// REMOVE Avada's own robots meta so ours is the only one
+// Runs at priority 0 — before Avada outputs anything
+// ════════════════════════════════════════════════════════════════
+add_action( 'wp_head', function() {
+	remove_action( 'wp_head', 'avada_robots_meta',    1 );
+	remove_action( 'wp_head', 'avada_robots_meta',   99 );
+	remove_action( 'wp_head', 'avada_robots_meta',   10 );
+}, 0 );
+
+// ════════════════════════════════════════════════════════════════
+// MAIN SEO HEAD — priority 1 (fires before all plugins + Avada)
+// ════════════════════════════════════════════════════════════════
+if ( ! function_exists( 'sc_seo_head' ) ) {
+	function sc_seo_head() {
+
+		// ── ROBOTS: noindex thin/duplicate pages ─────────────────
+		if ( is_search() || is_404() || is_date() || is_paged() ) {
+			echo '<meta name="robots" content="noindex, follow">' . "\n";
+			echo '<meta name="GPTBot" content="noindex">' . "\n";
+			echo '<meta name="ClaudeBot" content="noindex">' . "\n";
+			echo '<meta name="PerplexityBot" content="noindex">' . "\n";
+			return;
+		}
+
+		// Full indexing for all real content
+		echo '<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">' . "\n";
+
+		// ── AI CRAWLER OPT-IN (2026) ──────────────────────────────
+		echo '<meta name="GPTBot" content="index">' . "\n";
+		echo '<meta name="ClaudeBot" content="index">' . "\n";
+		echo '<meta name="PerplexityBot" content="index">' . "\n";
+		echo '<link rel="llms" href="' . esc_url( SC_SITE_URL . '/llms.txt' ) . '">' . "\n";
+
+		// ── GLOBAL META (all real pages) ──────────────────────────
+		echo '<meta name="author" content="' . esc_attr( SC_SITE_NAME ) . '">' . "\n";
+		echo '<meta property="og:site_name" content="' . esc_attr( SC_SITE_NAME ) . '">' . "\n";
+		echo '<meta property="og:locale" content="en_US">' . "\n";
+
+		// ── TWITTER CARD global ───────────────────────────────────
+		echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+		echo '<meta name="twitter:site" content="' . esc_attr( SC_TWITTER ) . '">' . "\n";
+
+		// ── SPEED: preconnect + DNS-prefetch ──────────────────────
+		echo '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n";
+		echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n";
+		echo '<link rel="dns-prefetch" href="//fonts.googleapis.com">' . "\n";
+		echo '<link rel="dns-prefetch" href="//fonts.gstatic.com">' . "\n";
+		echo '<link rel="dns-prefetch" href="//www.google-analytics.com">' . "\n";
+		echo '<link rel="dns-prefetch" href="//www.googletagmanager.com">' . "\n";
+
+		// ════════════════════════════════════════════════════════
+		// HOMEPAGE
+		// ════════════════════════════════════════════════════════
+		if ( is_front_page() ) {
+			$hp_title = SC_TAGLINE . ' | ' . SC_SITE_NAME;
+			$hp_desc  = 'Expert gadget reviews, honest product recommendations, and tech buying guides. Find the best technology solutions at SooperCart.';
+
+			echo '<meta property="og:type"        content="website">' . "\n";
+			echo '<meta property="og:title"       content="' . esc_attr( $hp_title ) . '">' . "\n";
+			echo '<meta property="og:description" content="' . esc_attr( $hp_desc ) . '">' . "\n";
+			echo '<meta property="og:url"         content="' . esc_url( SC_SITE_URL . '/' ) . '">' . "\n";
+			echo '<meta property="og:image"       content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
+			echo '<meta property="og:image:type"  content="image/webp">' . "\n";
+			echo '<meta property="og:image:width" content="1200">' . "\n";
+			echo '<meta property="og:image:height"content="630">' . "\n";
+			echo '<meta property="og:image:alt"   content="' . esc_attr( SC_SITE_NAME . ' – ' . SC_TAGLINE ) . '">' . "\n";
+			echo '<meta name="twitter:title"       content="' . esc_attr( $hp_title ) . '">' . "\n";
+			echo '<meta name="twitter:description" content="' . esc_attr( $hp_desc ) . '">' . "\n";
+			echo '<meta name="twitter:image"       content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
+
+			$schema = array(
+				'@context'     => 'https://schema.org',
+				'@type'        => 'WebPage',
+				'@id'          => SC_SITE_URL . '/#webpage',
+				'name'         => $hp_title,
+				'url'          => SC_SITE_URL . '/',
+				'description'  => $hp_desc,
+				'inLanguage'   => 'en-US',
+				'isPartOf'     => array( '@id' => SC_SITE_URL . '/#website' ),
+				'about'        => array( '@id' => SC_SITE_URL . '/#organization' ),
+				'publisher'    => array( '@id' => SC_SITE_URL . '/#organization' ),
+				'dateModified' => get_lastpostmodified( 'c' ),
+			);
+			echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+			echo sc_static_schemas();
+			echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
+			return;
+		}
+
+		// ════════════════════════════════════════════════════════
+		// SINGLE POSTS (reviews, guides, articles)
+		// ════════════════════════════════════════════════════════
+		if ( is_single() ) {
+			global $post;
+
+			$post_url    = get_permalink();
+			$post_title  = get_the_title();
+			$post_exc    = wp_strip_all_tags( get_the_excerpt() );
+			$thumb_id    = get_post_thumbnail_id( $post->ID );
+			$post_img    = $thumb_id ? get_the_post_thumbnail_url( $post->ID, 'large' ) : '';
+			$pub_date    = get_the_date( 'c' );
+			$mod_date    = get_the_modified_date( 'c' );
+
+			// Author — use WP user data; fall back to hardcoded known author
+			$author_obj  = get_userdata( $post->post_author );
+			$author_name = $author_obj ? $author_obj->display_name : SC_AUTHOR_NAME;
+			$author_url  = $author_obj ? get_author_posts_url( $post->post_author ) : SC_AUTHOR_URL;
+
+			// Category and tags
+			$cats        = get_the_category( $post->ID );
+			$primary_cat = ! empty( $cats ) ? $cats[0]->name : '';
+			$tags_list   = get_the_tags( $post->ID );
+			$tag_names   = array();
+			if ( $tags_list && ! is_wp_error( $tags_list ) ) {
+				foreach ( $tags_list as $t ) { $tag_names[] = $t->name; }
+			}
+
+			// Real image dimensions from WP metadata
+			$img_src  = $thumb_id ? wp_get_attachment_image_src( $thumb_id, 'large' ) : false;
+			$img_w    = $img_src ? (int) $img_src[1] : 1200;
+			$img_h    = $img_src ? (int) $img_src[2] : 630;
+			$img_mime = sc_image_mime( $thumb_id );
+			$wc       = str_word_count( wp_strip_all_tags( $post->post_content ) );
+
+			// ── Open Graph: article ───────────────────────────────
+			echo '<meta property="og:type"                 content="article">' . "\n";
+			echo '<meta property="og:title"                content="' . esc_attr( $post_title ) . '">' . "\n";
+			echo '<meta property="og:description"          content="' . esc_attr( $post_exc ) . '">' . "\n";
+			echo '<meta property="og:url"                  content="' . esc_url( $post_url ) . '">' . "\n";
+			echo '<meta property="article:published_time"  content="' . esc_attr( $pub_date ) . '">' . "\n";
+			echo '<meta property="article:modified_time"   content="' . esc_attr( $mod_date ) . '">' . "\n";
+			echo '<meta property="article:author"          content="' . esc_url( $author_url ) . '">' . "\n";
+			if ( $primary_cat ) {
+				echo '<meta property="article:section" content="' . esc_attr( $primary_cat ) . '">' . "\n";
+			}
+			foreach ( $tag_names as $tag ) {
+				echo '<meta property="article:tag" content="' . esc_attr( $tag ) . '">' . "\n";
+			}
+			if ( $post_img ) {
+				echo '<meta property="og:image"        content="' . esc_url( $post_img ) . '">' . "\n";
+				echo '<meta property="og:image:type"   content="' . $img_mime . '">' . "\n";
+				echo '<meta property="og:image:width"  content="' . $img_w . '">' . "\n";
+				echo '<meta property="og:image:height" content="' . $img_h . '">' . "\n";
+				echo '<meta property="og:image:alt"    content="' . esc_attr( $post_title ) . '">' . "\n";
+			} else {
+				echo '<meta property="og:image"        content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
+				echo '<meta property="og:image:type"   content="image/webp">' . "\n";
+				echo '<meta property="og:image:width"  content="1200">' . "\n";
+				echo '<meta property="og:image:height" content="630">' . "\n";
+				echo '<meta property="og:image:alt"    content="' . esc_attr( SC_SITE_NAME . ' – ' . SC_TAGLINE ) . '">' . "\n";
+			}
+
+			// ── Twitter Card ──────────────────────────────────────
+			echo '<meta name="twitter:title"       content="' . esc_attr( $post_title ) . '">' . "\n";
+			echo '<meta name="twitter:description" content="' . esc_attr( $post_exc ) . '">' . "\n";
+			echo '<meta name="twitter:image"       content="' . esc_url( $post_img ? $post_img : SC_SOCIAL_IMG ) . '">' . "\n";
+			echo '<meta name="twitter:creator"     content="' . esc_attr( SC_TWITTER ) . '">' . "\n";
+
+			// ── Author entity for schema ──────────────────────────
+			$author_ent = array(
+				'@type' => 'Person',
+				'name'  => $author_name,
+				'url'   => $author_url,
+				'image' => array(
+					'@type' => 'ImageObject',
+					'url'   => $author_obj
+						? get_avatar_url( $author_obj->ID, array( 'size' => 300 ) )
+						: 'https://www.gravatar.com/avatar/?d=mp&s=300',
+				),
+				'worksFor' => array( '@id' => SC_SITE_URL . '/#organization' ),
+			);
+			if ( $author_obj && ! empty( $author_obj->user_url ) ) {
+				$author_ent['sameAs'] = array( $author_obj->user_url );
+			}
+
+			// ── About entities from tags ──────────────────────────
+			$about = array();
+			if ( ! empty( $tags_list ) && ! is_wp_error( $tags_list ) ) {
+				foreach ( $tags_list as $t ) { $about[] = array( '@type' => 'Thing', 'name' => $t->name ); }
+			}
+
+			// ── BlogPosting schema ────────────────────────────────
+			$article = array(
+				'@context'             => 'https://schema.org',
+				'@type'                => 'BlogPosting',
+				'@id'                  => $post_url . '#article',
+				'headline'             => $post_title,
+				'url'                  => $post_url,
+				'datePublished'        => $pub_date,
+				'dateModified'         => $mod_date,
+				'wordCount'            => $wc,
+				'inLanguage'           => 'en-US',
+				'author'               => $author_ent,
+				'publisher'            => array( '@id' => SC_SITE_URL . '/#organization' ),
+				'description'          => $post_exc,
+				'mainEntityOfPage'     => array( '@type' => 'WebPage', '@id' => $post_url ),
+				'isPartOf'             => array( '@id' => SC_SITE_URL . '/#website' ),
+				'copyrightYear'        => get_the_date( 'Y' ),
+				'copyrightHolder'      => array( '@id' => SC_SITE_URL . '/#organization' ),
+				'speakable'            => array(
+					'@type'       => 'SpeakableSpecification',
+					'cssSelector' => array( 'h1.entry-title', '.entry-content > p:first-of-type' ),
+				),
+				'accessMode'           => array( 'textual', 'visual' ),
+				'accessibilityFeature' => array( 'alternativeText', 'readingOrder' ),
+			);
+
+			if ( ! empty( $tag_names ) ) { $article['keywords'] = implode( ', ', $tag_names ); }
+			if ( ! empty( $about ) )     { $article['about']    = $about; }
+			if ( $post_img ) {
+				$article['image'] = array( '@type' => 'ImageObject', 'url' => $post_img, 'width' => $img_w, 'height' => $img_h );
+			}
+
+			// Optional star rating
+			$rating = sc_get_rating( $post->ID );
+			if ( $rating ) {
+				$article['reviewRating'] = array(
+					'@type' => 'Rating', 'ratingValue' => $rating['ratingValue'],
+					'bestRating' => 5, 'worstRating' => 1, 'ratingCount' => $rating['ratingCount'],
+				);
+			}
+
+			// Optional date reviewed
+			$reviewed = get_post_meta( $post->ID, '_sc_reviewed', true );
+			if ( $reviewed ) {
+				$article['dateReviewed'] = sanitize_text_field( $reviewed );
+				$article['reviewedBy']   = array( '@type' => 'Organization', 'name' => SC_SITE_NAME . ' Editorial Team' );
+			}
+
+			// Optional citations
+			$sources = get_post_meta( $post->ID, '_sc_sources', true );
+			if ( $sources ) {
+				$cites = array();
+				foreach ( array_filter( array_map( 'trim', explode( '||', $sources ) ) ) as $src ) {
+					$cites[] = array( '@type' => 'CreativeWork', 'url' => esc_url( $src ) );
+				}
+				if ( ! empty( $cites ) ) { $article['citation'] = $cites; }
+			}
+
+			echo '<script type="application/ld+json">' . wp_json_encode( $article, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+
+			sc_breadcrumb_schema();
+			sc_output_faq_schema( $post->post_content );
+			echo sc_static_schemas();
+
+			// LCP: preload featured image with responsive srcset
+			if ( $post_img && $thumb_id ) {
+				$srcset = wp_get_attachment_image_srcset( $thumb_id, 'large' );
+				$sizes  = wp_get_attachment_image_sizes( $thumb_id, 'large' );
+				if ( $srcset && $sizes ) {
+					echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( $post_img ) . '" imagesrcset="' . esc_attr( $srcset ) . '" imagesizes="' . esc_attr( $sizes ) . '">' . "\n";
+				} else {
+					echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( $post_img ) . '">' . "\n";
+				}
+			}
+			return;
+		}
+
+		// ════════════════════════════════════════════════════════
+		// CATEGORY ARCHIVES
+		// ════════════════════════════════════════════════════════
+		if ( is_category() ) {
+			$cat    = get_queried_object();
+			$c_url  = get_category_link( $cat->term_id );
+			$c_name = $cat->name . ' Reviews & Guides | ' . SC_SITE_NAME;
+			$c_desc = $cat->description
+				? wp_strip_all_tags( $cat->description )
+				: 'Browse ' . $cat->name . ' reviews and guides at ' . SC_SITE_NAME . ' – expert recommendations for the best gadgets.';
+
+			echo '<meta property="og:type"        content="website">' . "\n";
+			echo '<meta property="og:title"       content="' . esc_attr( $c_name ) . '">' . "\n";
+			echo '<meta property="og:description" content="' . esc_attr( $c_desc ) . '">' . "\n";
+			echo '<meta property="og:url"         content="' . esc_url( $c_url ) . '">' . "\n";
+			echo '<meta property="og:image"       content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
+			echo '<meta property="og:image:type"  content="image/webp">' . "\n";
+			echo '<meta property="og:image:width" content="1200">' . "\n";
+			echo '<meta property="og:image:height"content="630">' . "\n";
+			echo '<meta property="og:image:alt"   content="' . esc_attr( $cat->name . ' – ' . SC_SITE_NAME ) . '">' . "\n";
+			echo '<meta name="twitter:title"       content="' . esc_attr( $c_name ) . '">' . "\n";
+			echo '<meta name="twitter:description" content="' . esc_attr( $c_desc ) . '">' . "\n";
+			echo '<meta name="twitter:image"       content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
+
+			$schema = array(
+				'@context'    => 'https://schema.org',
+				'@type'       => 'CollectionPage',
+				'name'        => $c_name,
+				'url'         => $c_url,
+				'description' => $c_desc,
+				'inLanguage'  => 'en-US',
+				'isPartOf'    => array( '@id' => SC_SITE_URL . '/#website' ),
+				'publisher'   => array( '@id' => SC_SITE_URL . '/#organization' ),
+			);
+			echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+			sc_breadcrumb_schema();
+			echo sc_static_schemas();
+			echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
+			return;
+		}
+
+		// ════════════════════════════════════════════════════════
+		// TAG ARCHIVES
+		// ════════════════════════════════════════════════════════
+		if ( is_tag() ) {
+			$tag    = get_queried_object();
+			$t_url  = get_tag_link( $tag->term_id );
+			$t_name = $tag->name . ' | ' . SC_SITE_NAME;
+			$t_desc = $tag->description
+				? wp_strip_all_tags( $tag->description )
+				: 'Articles tagged "' . $tag->name . '" – gadget reviews and tech insights at ' . SC_SITE_NAME . '.';
+
+			echo '<meta property="og:type"        content="website">' . "\n";
+			echo '<meta property="og:title"       content="' . esc_attr( $t_name ) . '">' . "\n";
+			echo '<meta property="og:description" content="' . esc_attr( $t_desc ) . '">' . "\n";
+			echo '<meta property="og:url"         content="' . esc_url( $t_url ) . '">' . "\n";
+			echo '<meta property="og:image"       content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
+			echo '<meta property="og:image:type"  content="image/webp">' . "\n";
+			echo '<meta property="og:image:width" content="1200">' . "\n";
+			echo '<meta property="og:image:height"content="630">' . "\n";
+			echo '<meta property="og:image:alt"   content="' . esc_attr( $tag->name . ' – ' . SC_SITE_NAME ) . '">' . "\n";
+			echo '<meta name="twitter:title"       content="' . esc_attr( $t_name ) . '">' . "\n";
+			echo '<meta name="twitter:description" content="' . esc_attr( $t_desc ) . '">' . "\n";
+			echo '<meta name="twitter:image"       content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
+
+			$schema = array(
+				'@context'    => 'https://schema.org',
+				'@type'       => 'CollectionPage',
+				'name'        => $t_name,
+				'url'         => $t_url,
+				'description' => $t_desc,
+				'inLanguage'  => 'en-US',
+				'isPartOf'    => array( '@id' => SC_SITE_URL . '/#website' ),
+				'publisher'   => array( '@id' => SC_SITE_URL . '/#organization' ),
+			);
+			echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+			sc_breadcrumb_schema();
+			echo sc_static_schemas();
+			echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
+			return;
+		}
+
+		// ════════════════════════════════════════════════════════
+		// AUTHOR ARCHIVES
+		// ════════════════════════════════════════════════════════
+		if ( is_author() ) {
+			$author  = get_queried_object();
+			$a_url   = get_author_posts_url( $author->ID );
+			$a_bio   = wp_strip_all_tags( $author->description );
+			$a_name  = $author->display_name . ' | ' . SC_SITE_NAME;
+			$a_desc  = $a_bio ? $a_bio : $author->display_name . ' – Gadget reviewer and tech writer at ' . SC_SITE_NAME . '.';
+			$a_image = get_avatar_url( $author->ID, array( 'size' => 300 ) );
+
+			echo '<meta property="og:type"        content="profile">' . "\n";
+			echo '<meta property="og:title"       content="' . esc_attr( $a_name ) . '">' . "\n";
+			echo '<meta property="og:description" content="' . esc_attr( $a_desc ) . '">' . "\n";
+			echo '<meta property="og:url"         content="' . esc_url( $a_url ) . '">' . "\n";
+			echo '<meta property="og:image"       content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
+			echo '<meta property="og:image:type"  content="image/webp">' . "\n";
+			echo '<meta property="og:image:width" content="1200">' . "\n";
+			echo '<meta property="og:image:height"content="630">' . "\n";
+			echo '<meta property="og:image:alt"   content="' . esc_attr( $author->display_name . ' – ' . SC_SITE_NAME ) . '">' . "\n";
+			echo '<meta name="twitter:title"       content="' . esc_attr( $a_name ) . '">' . "\n";
+			echo '<meta name="twitter:description" content="' . esc_attr( $a_desc ) . '">' . "\n";
+			echo '<meta name="twitter:image"       content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
+
+			// Person schema — full E-E-A-T entity
+			$person = array(
+				'@context'    => 'https://schema.org',
+				'@type'       => 'Person',
+				'@id'         => SC_AUTHOR_URL . '#person',
+				'name'        => $author->display_name,
+				'url'         => $a_url,
+				'description' => $a_desc,
+				'image'       => array(
+					'@type' => 'ImageObject',
+					'url'   => $a_image,
+					'width'  => 300,
+					'height' => 300,
+				),
+				'worksFor'    => array( '@id' => SC_SITE_URL . '/#organization' ),
+				'jobTitle'    => 'Gadget Reviewer & Tech Writer',
+				'sameAs'      => array(
+					SC_AUTHOR_URL,
+					'https://www.facebook.com/SooperCartOfficial',
+					'https://www.instagram.com/soopercart_',
+				),
+			);
+			if ( ! empty( $author->user_url ) ) {
+				$person['sameAs'][] = $author->user_url;
+			}
+
+			echo '<script type="application/ld+json">' . wp_json_encode( $person, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
+			sc_breadcrumb_schema();
+			echo sc_static_schemas();
+			echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
+			return;
+		}
+
+		// ════════════════════════════════════════════════════════
+		// STATIC PAGES (About, Contact, Privacy, Buying Guides…)
+		// ════════════════════════════════════════════════════════
+		if ( is_page() && ! is_front_page() ) {
+			global $post;
+
+			$p_url   = get_permalink();
+			$p_title = get_the_title() . ' | ' . SC_SITE_NAME;
+			$p_exc   = wp_strip_all_tags( get_the_excerpt() );
+			$p_img   = get_the_post_thumbnail_url( $post->ID, 'large' );
+			$p_tid   = get_post_thumbnail_id( $post->ID );
+
+			echo '<meta property="og:type"  content="website">' . "\n";
+			echo '<meta property="og:title" content="' . esc_attr( $p_title ) . '">' . "\n";
+			if ( $p_exc ) {
+				echo '<meta property="og:description" content="' . esc_attr( $p_exc ) . '">' . "\n";
+			}
+			echo '<meta property="og:url" content="' . esc_url( $p_url ) . '">' . "\n";
+			if ( $p_img ) {
+				echo '<meta property="og:image"      content="' . esc_url( $p_img ) . '">' . "\n";
+				echo '<meta property="og:image:type" content="' . sc_image_mime( $p_tid ) . '">' . "\n";
+				echo '<meta property="og:image:alt"  content="' . esc_attr( $p_title ) . '">' . "\n";
+			} else {
+				echo '<meta property="og:image"        content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
+				echo '<meta property="og:image:type"   content="image/webp">' . "\n";
+				echo '<meta property="og:image:width"  content="1200">' . "\n";
+				echo '<meta property="og:image:height" content="630">' . "\n";
+				echo '<meta property="og:image:alt"    content="' . esc_attr( $p_title ) . '">' . "\n";
+			}
+			echo '<meta name="twitter:title"       content="' . esc_attr( $p_title ) . '">' . "\n";
+			if ( $p_exc ) { echo '<meta name="twitter:description" content="' . esc_attr( $p_exc ) . '">' . "\n"; }
+			echo '<meta name="twitter:image"       content="' . esc_url( $p_img ? $p_img : SC_SOCIAL_IMG ) . '">' . "\n";
+
+			sc_breadcrumb_schema();
+			sc_output_faq_schema( $post->post_content );
+			echo sc_static_schemas();
+			echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
+			return;
+		}
+
+		// ════════════════════════════════════════════════════════
+		// ALL OTHER PAGES (WooCommerce, custom post types…)
+		// ════════════════════════════════════════════════════════
+		echo sc_static_schemas();
+		echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
+	}
+}
+
 add_action( 'wp_head', 'sc_seo_head', 1 );
 
-function sc_seo_head() {
-
-	// ============================================================
-	// ROBOTS — thin / duplicate pages get noindex first
-	// ============================================================
-	if ( is_search() || is_404() || is_date() || is_paged() ) {
-		echo '<meta name="robots" content="noindex, follow">' . "\n";
-		echo '<meta name="GPTBot" content="noindex">' . "\n";
-		echo '<meta name="ClaudeBot" content="noindex">' . "\n";
-		echo '<meta name="PerplexityBot" content="noindex">' . "\n";
-		return; // Nothing else needed for noindex pages
-	}
-
-	// Full permissive indexing for all real content pages
-	echo '<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">' . "\n";
-
-	// ============================================================
-	// AI CRAWLER DIRECTIVES — May 2026
-	// Opt-in so ChatGPT, Claude, Perplexity index and cite us.
-	// ============================================================
-	echo '<meta name="GPTBot" content="index">' . "\n";
-	echo '<meta name="ClaudeBot" content="index">' . "\n";
-	echo '<meta name="PerplexityBot" content="index">' . "\n";
-	echo '<link rel="llms" href="' . esc_url( SC_SITE_URL . '/llms.txt' ) . '">' . "\n";
-
-	// ============================================================
-	// GLOBAL OG META — shared across all real pages
-	// ============================================================
-	echo '<meta name="author" content="' . esc_attr( SC_SITE_NAME ) . '">' . "\n";
-	echo '<meta property="og:site_name" content="' . esc_attr( SC_SITE_NAME ) . '">' . "\n";
-	echo '<meta property="og:locale" content="en_US">' . "\n";
-
-	// ============================================================
-	// SPEED — Preconnect + DNS prefetch (all pages)
-	// ============================================================
-	echo '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n";
-	echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n";
-	echo '<link rel="dns-prefetch" href="//fonts.googleapis.com">' . "\n";
-	echo '<link rel="dns-prefetch" href="//fonts.gstatic.com">' . "\n";
-	echo '<link rel="dns-prefetch" href="//www.google-analytics.com">' . "\n";
-	echo '<link rel="dns-prefetch" href="//www.googletagmanager.com">' . "\n";
-
-	// ============================================================
-	// HOMEPAGE
-	// ============================================================
-	if ( is_front_page() ) {
-
-		echo '<meta property="og:type" content="website">' . "\n";
-		echo '<meta property="og:title" content="' . esc_attr( SC_SITE_TAGLINE . ' | ' . SC_SITE_NAME ) . '">' . "\n";
-		echo '<meta property="og:description" content="Expert gadget reviews, honest product recommendations, and tech buying guides. Find the best technology solutions at SooperCart.">' . "\n";
-		echo '<meta property="og:url" content="' . esc_url( SC_SITE_URL . '/' ) . '">' . "\n";
-		echo '<meta property="og:image" content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
-		echo '<meta property="og:image:type" content="image/webp">' . "\n";
-		echo '<meta property="og:image:width" content="1200">' . "\n";
-		echo '<meta property="og:image:height" content="630">' . "\n";
-		echo '<meta property="og:image:alt" content="' . esc_attr( SC_SITE_NAME . ' – ' . SC_SITE_TAGLINE ) . '">' . "\n";
-
-		// WebPage schema links homepage into the @id entity graph
-		$hp_schema = array(
-			'@context'     => 'https://schema.org',
-			'@type'        => 'WebPage',
-			'@id'          => SC_SITE_URL . '/#webpage',
-			'name'         => SC_SITE_TAGLINE . ' | ' . SC_SITE_NAME,
-			'url'          => SC_SITE_URL . '/',
-			'description'  => 'Expert gadget reviews, honest product recommendations, and tech buying guides. Find the best technology solutions at SooperCart.',
-			'inLanguage'   => 'en-US',
-			'isPartOf'     => array( '@id' => SC_SITE_URL . '/#website' ),
-			'about'        => array( '@id' => SC_SITE_URL . '/#organization' ),
-			'publisher'    => array( '@id' => SC_SITE_URL . '/#organization' ),
-			'dateModified' => get_lastpostmodified( 'c' ),
-		);
-		echo '<script type="application/ld+json">' . wp_json_encode( $hp_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
-
-		// Organization + WebSite schemas (12-hour transient cache)
-		echo sc_static_schemas();
-
-		// Preload logo on homepage for fastest LCP
-		echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
-
-		return;
-	}
-
-	// ============================================================
-	// SINGLE POSTS — Reviews & Guides
-	// ============================================================
-	if ( is_single() ) {
-		global $post;
-
-		// Gather all post data
-		$post_url    = get_permalink();
-		$post_title  = get_the_title();
-		$post_exc    = wp_strip_all_tags( get_the_excerpt() );
-		$thumb_id    = get_post_thumbnail_id( $post->ID );
-		$post_img    = $thumb_id ? get_the_post_thumbnail_url( $post->ID, 'large' ) : '';
-		$pub_date    = get_the_date( 'c' );
-		$mod_date    = get_the_modified_date( 'c' );
-		$author_obj  = get_userdata( $post->post_author );
-		$author_name = $author_obj ? $author_obj->display_name : SC_SITE_NAME;
-		$author_url  = get_author_posts_url( $post->post_author );
-
-		// Primary category
-		$cats        = get_the_category( $post->ID );
-		$primary_cat = ! empty( $cats ) ? $cats[0]->name : '';
-
-		// Tags array
-		$tags_list = get_the_tags( $post->ID );
-		$tag_names = array();
-		if ( $tags_list && ! is_wp_error( $tags_list ) ) {
-			foreach ( $tags_list as $t ) {
-				$tag_names[] = $t->name;
-			}
-		}
-
-		// Image dimensions from WordPress attachment metadata
-		$img_src    = $thumb_id ? wp_get_attachment_image_src( $thumb_id, 'large' ) : false;
-		$img_width  = $img_src ? (int) $img_src[1] : 1200;
-		$img_height = $img_src ? (int) $img_src[2] : 630;
-		$img_mime   = sc_image_mime( $thumb_id );
-
-		// Approximate word count from raw post content
-		$word_count = str_word_count( wp_strip_all_tags( $post->post_content ) );
-
-		// --- Open Graph: article type ---
-		echo '<meta property="og:type" content="article">' . "\n";
-		echo '<meta property="og:title" content="' . esc_attr( $post_title ) . '">' . "\n";
-		echo '<meta property="og:description" content="' . esc_attr( $post_exc ) . '">' . "\n";
-		echo '<meta property="og:url" content="' . esc_url( $post_url ) . '">' . "\n";
-
-		if ( $post_img ) {
-			echo '<meta property="og:image" content="' . esc_url( $post_img ) . '">' . "\n";
-			echo '<meta property="og:image:type" content="' . $img_mime . '">' . "\n";
-			echo '<meta property="og:image:width" content="' . $img_width . '">' . "\n";
-			echo '<meta property="og:image:height" content="' . $img_height . '">' . "\n";
-			echo '<meta property="og:image:alt" content="' . esc_attr( $post_title ) . '">' . "\n";
-		} else {
-			echo '<meta property="og:image" content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
-			echo '<meta property="og:image:type" content="image/webp">' . "\n";
-			echo '<meta property="og:image:width" content="1200">' . "\n";
-			echo '<meta property="og:image:height" content="630">' . "\n";
-			echo '<meta property="og:image:alt" content="' . esc_attr( SC_SITE_NAME . ' – ' . SC_SITE_TAGLINE ) . '">' . "\n";
-		}
-
-		echo '<meta property="article:published_time" content="' . esc_attr( $pub_date ) . '">' . "\n";
-		echo '<meta property="article:modified_time" content="' . esc_attr( $mod_date ) . '">' . "\n";
-
-		if ( $primary_cat ) {
-			echo '<meta property="article:section" content="' . esc_attr( $primary_cat ) . '">' . "\n";
-		}
-		foreach ( $tag_names as $tag ) {
-			echo '<meta property="article:tag" content="' . esc_attr( $tag ) . '">' . "\n";
-		}
-
-		// --- BlogPosting schema ---
-
-		// Author entity with gravatar
-		$author_entity = array(
-			'@type' => 'Person',
-			'name'  => $author_name,
-			'url'   => $author_url,
-		);
-		if ( $author_obj ) {
-			$author_entity['image'] = array(
-				'@type' => 'ImageObject',
-				'url'   => get_avatar_url( $author_obj->ID, array( 'size' => 300 ) ),
-			);
-			if ( ! empty( $author_obj->user_url ) ) {
-				$author_entity['sameAs'] = array( $author_obj->user_url );
-			}
-		}
-
-		// Named entities from tags (gadget names, product types)
-		$about_entities = array();
-		if ( ! empty( $tags_list ) && ! is_wp_error( $tags_list ) ) {
-			foreach ( $tags_list as $t ) {
-				$about_entities[] = array( '@type' => 'Thing', 'name' => $t->name );
-			}
-		}
-
-		// Speakable spec — marks headline + intro for voice / AI responses
-		$speakable = array(
-			'@type'       => 'SpeakableSpecification',
-			'cssSelector' => array( '.post-title', '.entry-content p:first-of-type' ),
-		);
-
-		$article = array(
-			'@context'             => 'https://schema.org',
-			'@type'                => 'BlogPosting',
-			'@id'                  => $post_url . '#article',
-			'headline'             => $post_title,
-			'url'                  => $post_url,
-			'datePublished'        => $pub_date,
-			'dateModified'         => $mod_date,
-			'wordCount'            => $word_count,
-			'inLanguage'           => 'en-US',
-			'author'               => $author_entity,
-			'publisher'            => array( '@id' => SC_SITE_URL . '/#organization' ),
-			'description'          => $post_exc,
-			'mainEntityOfPage'     => array( '@type' => 'WebPage', '@id' => $post_url ),
-			'isPartOf'             => array( '@id' => SC_SITE_URL . '/#website' ),
-			'copyrightYear'        => get_the_date( 'Y' ),
-			'copyrightHolder'      => array( '@id' => SC_SITE_URL . '/#organization' ),
-			'speakable'            => $speakable,
-			'accessMode'           => array( 'textual', 'visual' ),
-			'accessibilityFeature' => array( 'alternativeText', 'readingOrder' ),
-		);
-
-		// Keywords from post tags
-		if ( ! empty( $tag_names ) ) {
-			$article['keywords'] = implode( ', ', $tag_names );
-		}
-
-		// About — named entities (helps AI understand covered products)
-		if ( ! empty( $about_entities ) ) {
-			$article['about'] = $about_entities;
-		}
-
-		// Featured image with real pixel dimensions
-		if ( $post_img ) {
-			$article['image'] = array(
-				'@type'  => 'ImageObject',
-				'url'    => $post_img,
-				'width'  => $img_width,
-				'height' => $img_height,
-			);
-		}
-
-		// Star rating — optional, set via WP custom fields
-		$rating = sc_get_rating( $post->ID );
-		if ( $rating ) {
-			$article['reviewRating'] = array(
-				'@type'       => 'Rating',
-				'ratingValue' => $rating['ratingValue'],
-				'bestRating'  => 5,
-				'worstRating' => 1,
-				'ratingCount' => $rating['ratingCount'],
-			);
-		}
-
-		// Date reviewed — optional, set via _sc_reviewed custom field
-		$reviewed_date = get_post_meta( $post->ID, '_sc_reviewed', true );
-		if ( $reviewed_date ) {
-			$article['dateReviewed'] = sanitize_text_field( $reviewed_date );
-			$article['reviewedBy']   = array(
-				'@type' => 'Organization',
-				'name'  => SC_SITE_NAME . ' Editorial Team',
-			);
-		}
-
-		// Citations — optional, set via _sc_sources (pipe-separated URLs)
-		$sources_raw = get_post_meta( $post->ID, '_sc_sources', true );
-		if ( $sources_raw ) {
-			$citations = array();
-			foreach ( array_filter( array_map( 'trim', explode( '||', $sources_raw ) ) ) as $src ) {
-				$citations[] = array( '@type' => 'CreativeWork', 'url' => esc_url( $src ) );
-			}
-			if ( ! empty( $citations ) ) {
-				$article['citation'] = $citations;
-			}
-		}
-
-		echo '<script type="application/ld+json">' . wp_json_encode( $article, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
-
-		// BreadcrumbList schema
-		sc_breadcrumb_schema();
-
-		// FAQPage schema — auto-detected from post content
-		$faqs = sc_extract_faqs( $post->post_content );
-		if ( ! empty( $faqs ) ) {
-			$faq_entities = array();
-			foreach ( $faqs as $faq ) {
-				$faq_entities[] = array(
-					'@type'          => 'Question',
-					'name'           => $faq['question'],
-					'acceptedAnswer' => array( '@type' => 'Answer', 'text' => $faq['answer'] ),
-				);
-			}
-			$faq_schema = array(
-				'@context'   => 'https://schema.org',
-				'@type'      => 'FAQPage',
-				'mainEntity' => $faq_entities,
-			);
-			echo '<script type="application/ld+json">' . wp_json_encode( $faq_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
-		}
-
-		// Organization + WebSite schemas (cached)
-		echo sc_static_schemas();
-
-		// LCP: preload featured image with full responsive srcset
-		if ( $post_img && $thumb_id ) {
-			$srcset = wp_get_attachment_image_srcset( $thumb_id, 'large' );
-			$sizes  = wp_get_attachment_image_sizes( $thumb_id, 'large' );
-			if ( $srcset && $sizes ) {
-				echo '<link rel="preload" as="image" fetchpriority="high"'
-					. ' href="' . esc_url( $post_img ) . '"'
-					. ' imagesrcset="' . esc_attr( $srcset ) . '"'
-					. ' imagesizes="' . esc_attr( $sizes ) . '">' . "\n";
-			} else {
-				echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( $post_img ) . '">' . "\n";
-			}
-		}
-
-		return;
-	}
-
-	// ============================================================
-	// CATEGORY ARCHIVES
-	// ============================================================
-	if ( is_category() ) {
-		$cat     = get_queried_object();
-		$cat_url = get_category_link( $cat->term_id );
-		$cat_og  = $cat->description
-			? wp_strip_all_tags( $cat->description )
-			: 'Browse ' . $cat->name . ' reviews and guides at ' . SC_SITE_NAME . ' – expert recommendations for the best gadgets.';
-
-		echo '<meta property="og:type" content="website">' . "\n";
-		echo '<meta property="og:title" content="' . esc_attr( $cat->name . ' Reviews & Guides | ' . SC_SITE_NAME ) . '">' . "\n";
-		echo '<meta property="og:description" content="' . esc_attr( $cat_og ) . '">' . "\n";
-		echo '<meta property="og:url" content="' . esc_url( $cat_url ) . '">' . "\n";
-		echo '<meta property="og:image" content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
-		echo '<meta property="og:image:type" content="image/webp">' . "\n";
-		echo '<meta property="og:image:width" content="1200">' . "\n";
-		echo '<meta property="og:image:height" content="630">' . "\n";
-		echo '<meta property="og:image:alt" content="' . esc_attr( $cat->name . ' – ' . SC_SITE_NAME ) . '">' . "\n";
-
-		$collection = array(
-			'@context'    => 'https://schema.org',
-			'@type'       => 'CollectionPage',
-			'name'        => $cat->name . ' Reviews & Guides | ' . SC_SITE_NAME,
-			'url'         => $cat_url,
-			'description' => $cat_og,
-			'inLanguage'  => 'en-US',
-			'isPartOf'    => array( '@id' => SC_SITE_URL . '/#website' ),
-			'publisher'   => array( '@id' => SC_SITE_URL . '/#organization' ),
-		);
-		echo '<script type="application/ld+json">' . wp_json_encode( $collection, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
-
-		sc_breadcrumb_schema();
-		echo sc_static_schemas();
-		echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
-
-		return;
-	}
-
-	// ============================================================
-	// TAG ARCHIVES
-	// ============================================================
-	if ( is_tag() ) {
-		$tag     = get_queried_object();
-		$tag_url = get_tag_link( $tag->term_id );
-		$tag_og  = $tag->description
-			? wp_strip_all_tags( $tag->description )
-			: 'Articles tagged "' . $tag->name . '" – gadget reviews and tech insights at ' . SC_SITE_NAME . '.';
-
-		echo '<meta property="og:type" content="website">' . "\n";
-		echo '<meta property="og:title" content="' . esc_attr( $tag->name . ' | ' . SC_SITE_NAME ) . '">' . "\n";
-		echo '<meta property="og:description" content="' . esc_attr( $tag_og ) . '">' . "\n";
-		echo '<meta property="og:url" content="' . esc_url( $tag_url ) . '">' . "\n";
-		echo '<meta property="og:image" content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
-		echo '<meta property="og:image:type" content="image/webp">' . "\n";
-		echo '<meta property="og:image:width" content="1200">' . "\n";
-		echo '<meta property="og:image:height" content="630">' . "\n";
-		echo '<meta property="og:image:alt" content="' . esc_attr( $tag->name . ' – ' . SC_SITE_NAME ) . '">' . "\n";
-
-		$tag_collection = array(
-			'@context'    => 'https://schema.org',
-			'@type'       => 'CollectionPage',
-			'name'        => $tag->name . ' | ' . SC_SITE_NAME,
-			'url'         => $tag_url,
-			'description' => $tag_og,
-			'inLanguage'  => 'en-US',
-			'isPartOf'    => array( '@id' => SC_SITE_URL . '/#website' ),
-			'publisher'   => array( '@id' => SC_SITE_URL . '/#organization' ),
-		);
-		echo '<script type="application/ld+json">' . wp_json_encode( $tag_collection, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
-
-		sc_breadcrumb_schema();
-		echo sc_static_schemas();
-		echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
-
-		return;
-	}
-
-	// ============================================================
-	// AUTHOR ARCHIVES
-	// ============================================================
-	if ( is_author() ) {
-		$author   = get_queried_object();
-		$auth_url = get_author_posts_url( $author->ID );
-		$auth_bio = wp_strip_all_tags( $author->description );
-		$auth_og  = $auth_bio ? $auth_bio : $author->display_name . ' – Reviewer at ' . SC_SITE_NAME . ' Gadget Reviews.';
-
-		echo '<meta property="og:type" content="website">' . "\n";
-		echo '<meta property="og:title" content="' . esc_attr( $author->display_name . ' | ' . SC_SITE_NAME ) . '">' . "\n";
-		echo '<meta property="og:description" content="' . esc_attr( $auth_og ) . '">' . "\n";
-		echo '<meta property="og:url" content="' . esc_url( $auth_url ) . '">' . "\n";
-		echo '<meta property="og:image" content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
-		echo '<meta property="og:image:type" content="image/webp">' . "\n";
-		echo '<meta property="og:image:width" content="1200">' . "\n";
-		echo '<meta property="og:image:height" content="630">' . "\n";
-		echo '<meta property="og:image:alt" content="' . esc_attr( $author->display_name . ' – ' . SC_SITE_NAME . ' Reviewer' ) . '">' . "\n";
-
-		// Person schema — full E-E-A-T entity
-		$person = array(
-			'@context'    => 'https://schema.org',
-			'@type'       => 'Person',
-			'name'        => $author->display_name,
-			'url'         => $auth_url,
-			'description' => $auth_bio,
-			'image'       => array(
-				'@type' => 'ImageObject',
-				'url'   => get_avatar_url( $author->ID, array( 'size' => 300 ) ),
-			),
-			'worksFor'    => array( '@id' => SC_SITE_URL . '/#organization' ),
-		);
-		if ( ! empty( $author->user_url ) ) {
-			$person['sameAs'] = array( $author->user_url );
-		}
-		echo '<script type="application/ld+json">' . wp_json_encode( $person, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
-
-		sc_breadcrumb_schema();
-		echo sc_static_schemas();
-		echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
-
-		return;
-	}
-
-	// ============================================================
-	// STATIC PAGES — About, Contact, Privacy, Buying Guides, etc.
-	// ============================================================
-	if ( is_page() && ! is_front_page() ) {
-		global $post;
-
-		$page_url   = get_permalink();
-		$page_title = get_the_title();
-		$page_exc   = wp_strip_all_tags( get_the_excerpt() );
-		$page_img   = get_the_post_thumbnail_url( $post->ID, 'large' );
-		$page_tid   = get_post_thumbnail_id( $post->ID );
-
-		echo '<meta property="og:type" content="website">' . "\n";
-		echo '<meta property="og:title" content="' . esc_attr( $page_title . ' | ' . SC_SITE_NAME ) . '">' . "\n";
-		if ( $page_exc ) {
-			echo '<meta property="og:description" content="' . esc_attr( $page_exc ) . '">' . "\n";
-		}
-		echo '<meta property="og:url" content="' . esc_url( $page_url ) . '">' . "\n";
-
-		if ( $page_img ) {
-			echo '<meta property="og:image" content="' . esc_url( $page_img ) . '">' . "\n";
-			echo '<meta property="og:image:type" content="' . sc_image_mime( $page_tid ) . '">' . "\n";
-			echo '<meta property="og:image:alt" content="' . esc_attr( $page_title . ' – ' . SC_SITE_NAME ) . '">' . "\n";
-		} else {
-			echo '<meta property="og:image" content="' . esc_url( SC_SOCIAL_IMG ) . '">' . "\n";
-			echo '<meta property="og:image:type" content="image/webp">' . "\n";
-			echo '<meta property="og:image:width" content="1200">' . "\n";
-			echo '<meta property="og:image:height" content="630">' . "\n";
-			echo '<meta property="og:image:alt" content="' . esc_attr( $page_title . ' – ' . SC_SITE_NAME ) . '">' . "\n";
-		}
-
-		sc_breadcrumb_schema();
-
-		// FAQPage schema — auto-detected (buying guides, FAQ pages, etc.)
-		$page_faqs = sc_extract_faqs( $post->post_content );
-		if ( ! empty( $page_faqs ) ) {
-			$faq_entities = array();
-			foreach ( $page_faqs as $faq ) {
-				$faq_entities[] = array(
-					'@type'          => 'Question',
-					'name'           => $faq['question'],
-					'acceptedAnswer' => array( '@type' => 'Answer', 'text' => $faq['answer'] ),
-				);
-			}
-			$faq_schema = array(
-				'@context'   => 'https://schema.org',
-				'@type'      => 'FAQPage',
-				'mainEntity' => $faq_entities,
-			);
-			echo '<script type="application/ld+json">' . wp_json_encode( $faq_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
-		}
-
-		echo sc_static_schemas();
-		echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
-
-		return;
-	}
-
-	// ============================================================
-	// ALL OTHER PAGES — custom post types, WooCommerce shop, etc.
-	// Safe minimal defaults so no page is ever left completely bare.
-	// ============================================================
-	echo sc_static_schemas();
-	echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( SC_LOGO_IMG ) . '">' . "\n";
-}
-// ================================================================
-// END OF SEO FUNCTIONS — HTML TEMPLATE BEGINS BELOW
-// ================================================================
-
-
-sc_html_output:
+// ════════════════════════════════════════════════════════════════
+// AVADA HTML TEMPLATE — do not modify anything below this line
+// ════════════════════════════════════════════════════════════════
 ?>
 <!DOCTYPE html>
 <html class="<?php avada_the_html_class(); ?>" <?php language_attributes(); ?>>
@@ -962,20 +749,8 @@ sc_html_output:
 	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 	<?php Avada()->head->the_viewport(); ?>
-
-	<?php
-	/**
-	 * wp_head() fires all wp_head actions.
-	 * sc_seo_head() runs first at priority 1 — outputs robots,
-	 * OG tags, all schema JSON-LD, AI directives, and speed hints.
-	 * Avada's head actions fire after at their default priorities.
-	 * Avada outputs <title> and meta description here automatically.
-	 */
-	wp_head();
-
-	// Avada "Code › Head" field (Theme Options › Advanced)
-	echo apply_filters( 'avada_space_head', Avada()->settings->get( 'space_head' ) ); // phpcs:ignore WordPress.Security.EscapeOutput
-	?>
+	<?php wp_head(); ?>
+	<?php echo apply_filters( 'avada_space_head', Avada()->settings->get( 'space_head' ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 </head>
 
 <?php
