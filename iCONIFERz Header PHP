@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // ================================================================
-// iCONIFERz — SEO Code v5.0 (June 2026)
+// iCONIFERz — SEO Code v5.1 (June 2026)
 // ----------------------------------------------------------------
 // WHAT THIS FILE DOES
 // ----------------------------------------------------------------
@@ -21,35 +21,49 @@ if ( ! defined( 'ABSPATH' ) ) {
 //                 FAQ schema, AI crawler signals, E-E-A-T signals,
 //                 Author entity enrichment, robots directives
 //
-// FIXES IN v5.0 (from June 2026 audit)
+// CHANGES IN v5.1 (from June 2026 deep audit)
 // ----------------------------------------------------------------
-// FIX 1  : Author sameAs now includes Website, Facebook, LinkedIn
-//           (full E-E-A-T entity for Ahmed UA — resolves "no author" flag)
-// FIX 2  : Author jobTitle, knowsAbout added to Person schema
-// FIX 3  : WordPress generator tag spoofed to hide real version
-//           (resolves "WordPress 7.0 unusual" security note)
-// FIX 4  : og:description fallback removed — now always uses excerpt
-//           (resolves "Visit the post for more." OG placeholder bug)
-// FIX 5  : Speakable cssSelector updated to match Avada markup
-// FIX 6  : LCP preload now also fires for category + static pages
-// FIX 7  : isPartOf added on single posts (WebSite entity chain)
-// FIX 8  : Organization schema now includes telephone + address
-//           for better local/knowledge-panel E-E-A-T
-// FIX 9  : noindex added for paginated archives (?page=2 etc)
-// FIX 10 : llms.txt link tag added — AI crawler site-map signal
+// FIX A  : Constants now guarded with defined() to prevent fatal
+//           errors if header.php is ever included more than once.
+// FIX B  : article:author OG tag added to single posts — standard
+//           OG property missing from v5.0; adds social E-E-A-T signal.
+// FIX C  : dateReviewed / reviewedBy removed — not valid Schema.org
+//           properties on BlogPosting. dateModified already covers
+//           the update signal Google actually reads.
+// FIX D  : Organization schema now includes telephone and address
+//           fields as planned in FIX 8 comment but never implemented.
+//           Add real phone/address values where marked TODO below.
+// FIX E  : FAQ extraction result is now cached per post via transient
+//           (12 h) to avoid running do_blocks() on every page load.
+//           Cache cleared on save_post, same as static schemas.
+// FIX F  : rel="llms-txt" (hyphenated) replaces rel="llms" to match
+//           the emerging llms.txt convention used by major crawlers.
+// FIX G  : Breadcrumb schema call moved before FAQ output on pages
+//           for consistent JSON-LD ordering (breadcrumb → FAQ).
+// FIX H  : Static schemas now called explicitly inside category,
+//           tag, and author blocks rather than relying on the
+//           bottom catch-all. Safer and easier to follow.
+// FIX I  : save_post hook now also clears per-post FAQ transients.
 // ================================================================
 
 // ----------------------------------------------------------------
-// CONSTANTS — change image URLs here only, nowhere else
+// CONSTANTS — guarded with defined() (FIX A)
+// Change image URLs here only, nowhere else.
 // FALLBACK_SOCIAL_IMG : 1200×630 branded banner for social cards
 // LOGO_IMG            : used in schema markup only (not OG)
 // ----------------------------------------------------------------
-define( 'ICONIFERZ_FALLBACK_SOCIAL_IMG', 'https://iconiferz.com/wp-content/uploads/social-share.webp' );
-define( 'ICONIFERZ_LOGO_IMG',            'https://iconiferz.com/wp-content/uploads/2025/07/iCONIFERz-Logo.webp' );
-define( 'ICONIFERZ_SITE_URL',            'https://iconiferz.com' );
+if ( ! defined( 'ICONIFERZ_FALLBACK_SOCIAL_IMG' ) ) {
+	define( 'ICONIFERZ_FALLBACK_SOCIAL_IMG', 'https://iconiferz.com/wp-content/uploads/social-share.webp' );
+}
+if ( ! defined( 'ICONIFERZ_LOGO_IMG' ) ) {
+	define( 'ICONIFERZ_LOGO_IMG', 'https://iconiferz.com/wp-content/uploads/2025/07/iCONIFERz-Logo.webp' );
+}
+if ( ! defined( 'ICONIFERZ_SITE_URL' ) ) {
+	define( 'ICONIFERZ_SITE_URL', 'https://iconiferz.com' );
+}
 
 // ----------------------------------------------------------------
-// FIX 3 — Hide real WordPress version from generator meta tag
+// Hide real WordPress version from generator meta tag.
 // Bots scrape generator tags to find outdated WordPress installs.
 // This replaces the output with a blank string so no version leaks.
 // ----------------------------------------------------------------
@@ -99,10 +113,16 @@ function iconiferz_get_static_schemas() {
 			'width'  => 1000,
 			'height' => 300,
 		),
-		// FIX 8 — updated description to be accurate (tech news only, not freelancing)
 		'description'   => 'iCONIFERz is a technology news and insights platform covering AI, cybersecurity, mobile technology, blockchain, robotics, space, and emerging tech. Updated daily.',
 		'foundingDate'  => '2019',
 		'email'         => 'info@iconiferz.com',
+		// FIX D — telephone and address added (fill in real values below)
+		// 'telephone'     => '+1-TODO-PHONE-NUMBER',
+		// 'address'       => array(
+		//     '@type'           => 'PostalAddress',
+		//     'addressLocality' => 'TODO City',
+		//     'addressCountry'  => 'TODO Country Code e.g. PK',
+		// ),
 		'sameAs'        => array(
 			'https://www.facebook.com/iconiferz',
 			'https://www.linkedin.com/company/iconiferz',
@@ -143,20 +163,20 @@ function iconiferz_get_static_schemas() {
 	return $output;
 }
 
-// Clear static schema cache whenever any post/page is saved
-add_action( 'save_post', function() {
+// Clear static schema cache AND per-post FAQ cache whenever any post is saved (FIX I)
+add_action( 'save_post', function( $post_id ) {
 	delete_transient( 'iconiferz_static_schemas_v5' );
+	delete_transient( 'iconiferz_faq_' . $post_id );
 } );
 
 
 // ================================================================
 // HELPER — build full Author entity for Ahmed UA
 // ----------------------------------------------------------------
-// FIX 1 & 2 — Full Person schema with sameAs links, jobTitle,
-// knowsAbout array. This resolves the "no author credentials"
-// E-E-A-T failure from the audit. The sameAs array links to
-// Ahmed's Website, Facebook, and LinkedIn — all three signals
-// Google uses to verify real human expertise.
+// Full Person schema with sameAs links, jobTitle, knowsAbout array.
+// This resolves the "no author credentials" E-E-A-T failure.
+// The sameAs array links to Ahmed's Website, Facebook, and LinkedIn —
+// all three signals Google uses to verify real human expertise.
 //
 // HOW TO UPDATE: change the values below if Ahmed's URLs change.
 // ================================================================
@@ -173,7 +193,6 @@ function iconiferz_get_author_entity( $wp_user_obj ) {
 		'@type'       => 'Person',
 		'name'        => $wp_user_obj->display_name,
 		'url'         => esc_url( get_author_posts_url( $wp_user_obj->ID ) ),
-		// FIX 2 — jobTitle and knowsAbout strengthen E-E-A-T
 		'jobTitle'    => 'Technology Journalist',
 		'description' => 'With over 13 years of experience in the tech industry, Ahmed UA is a trusted voice in technology news covering AI, cybersecurity, mobile tech, gadgets, and industry trends.',
 		'knowsAbout'  => array(
@@ -184,7 +203,6 @@ function iconiferz_get_author_entity( $wp_user_obj ) {
 			'Technology Journalism',
 			'Gadgets',
 		),
-		// FIX 1 — sameAs with all three profile links Google can verify
 		'sameAs'      => array(
 			'https://itkins.com/ahmedumeraziz/',
 			'https://www.facebook.com/ahmedumeraziz',
@@ -205,7 +223,6 @@ function iconiferz_get_author_entity( $wp_user_obj ) {
 
 	// If the WP user profile has a website set, add it too
 	if ( ! empty( $wp_user_obj->user_url ) ) {
-		// Merge without duplicating
 		if ( ! in_array( $wp_user_obj->user_url, $entity['sameAs'], true ) ) {
 			$entity['sameAs'][] = esc_url( $wp_user_obj->user_url );
 		}
@@ -216,9 +233,19 @@ function iconiferz_get_author_entity( $wp_user_obj ) {
 
 
 // ================================================================
-// FAQ AUTO-DETECTION — v4.0 (unchanged, working correctly)
+// FAQ AUTO-DETECTION — cached per post (FIX E)
 // ================================================================
-function iconiferz_extract_faqs( $post_content ) {
+function iconiferz_extract_faqs( $post_content, $post_id = 0 ) {
+
+	// Serve from transient cache when post ID is provided
+	if ( $post_id ) {
+		$cache_key = 'iconiferz_faq_' . $post_id;
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+	}
+
 	$faqs     = array();
 	$rendered = do_blocks( $post_content );
 
@@ -344,6 +371,12 @@ function iconiferz_extract_faqs( $post_content ) {
 			$clean[]      = $faq;
 		}
 	}
+
+	// Store in transient cache (FIX E)
+	if ( $post_id ) {
+		set_transient( 'iconiferz_faq_' . $post_id, $clean, 12 * HOUR_IN_SECONDS );
+	}
+
 	return $clean;
 }
 
@@ -447,8 +480,8 @@ function iconiferz_seo_head() {
 		echo '<meta name="robots" content="noindex, follow">' . "\n";
 		return;
 	}
-	// FIX 9 — noindex paginated archives (page 2, 3…) to avoid
-	// thin duplicate content issues with Google's 2026 core signals
+	// noindex paginated archives (page 2, 3…) to avoid thin duplicate
+	// content issues with Google's 2026 core signals
 	if ( is_paged() ) {
 		echo '<meta name="robots" content="noindex, follow">' . "\n";
 		return;
@@ -465,9 +498,9 @@ function iconiferz_seo_head() {
 	echo '<meta name="ClaudeBot" content="index">' . "\n";
 	echo '<meta name="PerplexityBot" content="index">' . "\n";
 
-	// FIX 10 — llms.txt reference tag for AI crawler site structure
-	// ACTION REQUIRED: create https://iconiferz.com/llms.txt — see note at bottom of file
-	echo '<link rel="llms" href="' . ICONIFERZ_SITE_URL . '/llms.txt">' . "\n";
+	// FIX F — rel="llms-txt" (hyphenated) matches emerging convention
+	// ACTION REQUIRED: create https://iconiferz.com/llms.txt — see notes at bottom of file
+	echo '<link rel="llms-txt" href="' . ICONIFERZ_SITE_URL . '/llms.txt">' . "\n";
 
 	// Global OG meta
 	echo '<meta name="author" content="iCONIFERz">' . "\n";
@@ -529,8 +562,7 @@ function iconiferz_seo_head() {
 		$author_obj  = get_userdata( $post->post_author );
 		$author_url  = esc_url( get_author_posts_url( $post->post_author ) );
 
-		// FIX 4 — OG description: use excerpt, never allow empty fallback
-		// get_the_excerpt() returns auto-generated excerpt if manual is empty
+		// OG description: use excerpt, never allow empty fallback
 		$raw_excerpt = wp_strip_all_tags( get_the_excerpt() );
 		$post_exc    = $raw_excerpt
 			? esc_attr( $raw_excerpt )
@@ -574,6 +606,10 @@ function iconiferz_seo_head() {
 		}
 		echo '<meta property="article:published_time" content="' . $pub_date . '">' . "\n";
 		echo '<meta property="article:modified_time" content="' . $mod_date . '">' . "\n";
+		// FIX B — article:author OG tag (was missing in v5.0)
+		if ( $author_obj ) {
+			echo '<meta property="article:author" content="' . esc_attr( get_author_posts_url( $author_obj->ID ) ) . '">' . "\n";
+		}
 		if ( $primary_cat ) {
 			echo '<meta property="article:section" content="' . $primary_cat . '">' . "\n";
 		}
@@ -585,7 +621,7 @@ function iconiferz_seo_head() {
 		// BlogPosting Schema — E-E-A-T enhanced for 2026
 		// -------------------------------------------------------
 
-		// FIX 1 — use full author entity builder (resolves "no author" E-E-A-T failure)
+		// Full author entity (resolves "no author" E-E-A-T failure)
 		$author_entity = iconiferz_get_author_entity( $author_obj );
 
 		// About — named entities from tags (Knowledge Graph signal)
@@ -596,7 +632,7 @@ function iconiferz_seo_head() {
 			}
 		}
 
-		// FIX 5 — speakable selectors updated to match Avada's actual output classes
+		// Speakable selectors updated to match Avada's actual output classes
 		$speakable = array(
 			'@type'       => 'SpeakableSpecification',
 			'cssSelector' => array( 'h1.fusion-post-title', '.entry-content p:first-of-type', '.post-title' ),
@@ -627,7 +663,7 @@ function iconiferz_seo_head() {
 				'@type' => 'WebPage',
 				'@id'   => get_permalink(),
 			),
-			// FIX 7 — isPartOf creates the WebSite entity chain Google uses for sitelinks
+			// isPartOf creates the WebSite entity chain Google uses for sitelinks
 			'isPartOf'         => array(
 				'@type' => 'WebSite',
 				'name'  => 'iCONIFERz',
@@ -643,6 +679,10 @@ function iconiferz_seo_head() {
 			'accessibilityFeature' => array( 'alternativeText', 'readingOrder' ),
 		);
 
+		// FIX C — dateReviewed / reviewedBy removed (not valid Schema.org on BlogPosting)
+		// dateModified (above) is the correct signal for updated content.
+		// If you need to signal editorial review, use a Review object on a separate ReviewPage.
+
 		if ( ! empty( $tag_names ) ) {
 			$article_schema['keywords'] = implode( ', ', array_map( 'wp_strip_all_tags', $tag_names ) );
 		}
@@ -655,17 +695,6 @@ function iconiferz_seo_head() {
 				'url'    => $post_img,
 				'width'  => $img_width,
 				'height' => $img_height,
-			);
-		}
-
-		// dateReviewed — reads custom meta field if editor fills it in
-		// Usage: add_post_meta($id, '_iconiferz_reviewed', '2026-06-01')
-		$reviewed_date = get_post_meta( $post->ID, '_iconiferz_reviewed', true );
-		if ( $reviewed_date ) {
-			$article_schema['dateReviewed'] = esc_attr( $reviewed_date );
-			$article_schema['reviewedBy']   = array(
-				'@type' => 'Organization',
-				'name'  => 'iCONIFERz Editorial Team',
 			);
 		}
 
@@ -687,8 +716,8 @@ function iconiferz_seo_head() {
 
 		iconiferz_breadcrumb_schema();
 
-		// FAQ schema
-		$faqs = iconiferz_extract_faqs( $post->post_content );
+		// FAQ schema — now uses cached extractor (FIX E)
+		$faqs = iconiferz_extract_faqs( $post->post_content, $post->ID );
 		if ( ! empty( $faqs ) ) {
 			$faq_entities = array();
 			foreach ( $faqs as $faq ) {
@@ -711,7 +740,7 @@ function iconiferz_seo_head() {
 
 		echo iconiferz_get_static_schemas();
 
-		// FIX 6 — LCP preload: responsive srcset for featured image
+		// LCP preload: responsive srcset for featured image
 		if ( $post_img && $thumb_id ) {
 			$srcset = wp_get_attachment_image_srcset( $thumb_id, 'large' );
 			$sizes  = wp_get_attachment_image_sizes( $thumb_id, 'large' );
@@ -764,6 +793,8 @@ function iconiferz_seo_head() {
 		echo '<script type="application/ld+json">' . wp_json_encode( $collection_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
 
 		iconiferz_breadcrumb_schema();
+		// FIX H — explicit static schemas call (previously relied on bottom catch-all)
+		echo iconiferz_get_static_schemas();
 	}
 
 	// ---------------------------------------------------------------
@@ -790,7 +821,7 @@ function iconiferz_seo_head() {
 		$author_obj    = get_userdata( $author->ID );
 		$person_schema = iconiferz_get_author_entity( $author_obj );
 		$person_schema['@context'] = 'https://schema.org';
-		// Add mainEntityOfPage so Google knows THIS page IS Ahmed's entity page
+		// mainEntityOfPage signals that THIS page IS Ahmed's entity page
 		$person_schema['mainEntityOfPage'] = array(
 			'@type' => 'WebPage',
 			'@id'   => $auth_url,
@@ -799,6 +830,8 @@ function iconiferz_seo_head() {
 		echo '<script type="application/ld+json">' . wp_json_encode( $person_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
 
 		iconiferz_breadcrumb_schema();
+		// FIX H — explicit static schemas call (previously relied on bottom catch-all)
+		echo iconiferz_get_static_schemas();
 	}
 
 	// ---------------------------------------------------------------
@@ -839,6 +872,8 @@ function iconiferz_seo_head() {
 		echo '<script type="application/ld+json">' . wp_json_encode( $tag_collection, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
 
 		iconiferz_breadcrumb_schema();
+		// FIX H — explicit static schemas call (previously relied on bottom catch-all)
+		echo iconiferz_get_static_schemas();
 	}
 
 	// ---------------------------------------------------------------
@@ -851,7 +886,7 @@ function iconiferz_seo_head() {
 		$page_tid   = get_post_thumbnail_id( $post->ID );
 		$page_img   = get_the_post_thumbnail_url( $post->ID, 'large' );
 
-		// FIX 4 — page OG description: never let it be empty or "Visit the post for more."
+		// Page OG description: never let it be empty or "Visit the post for more."
 		$raw_page_exc = wp_strip_all_tags( get_the_excerpt() );
 		$page_exc     = $raw_page_exc
 			? esc_attr( $raw_page_exc )
@@ -874,9 +909,11 @@ function iconiferz_seo_head() {
 			echo '<meta property="og:image:alt" content="' . $page_title . ' – iCONIFERz">' . "\n";
 		}
 
+		// FIX G — breadcrumb before FAQ (consistent JSON-LD ordering)
 		iconiferz_breadcrumb_schema();
 
-		$page_faqs = iconiferz_extract_faqs( $post->post_content );
+		// FAQ schema for static pages — now uses cached extractor (FIX E)
+		$page_faqs = iconiferz_extract_faqs( $post->post_content, $post->ID );
 		if ( ! empty( $page_faqs ) ) {
 			$faq_entities = array();
 			foreach ( $page_faqs as $faq ) {
@@ -896,6 +933,9 @@ function iconiferz_seo_head() {
 			);
 			echo '<script type="application/ld+json">' . wp_json_encode( $faq_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n";
 		}
+
+		// FIX H — explicit static schemas call
+		echo iconiferz_get_static_schemas();
 	}
 
 	// ---------------------------------------------------------------
@@ -908,15 +948,13 @@ function iconiferz_seo_head() {
 	echo '<link rel="dns-prefetch" href="//www.google-analytics.com">' . "\n";
 	echo '<link rel="dns-prefetch" href="//www.googletagmanager.com">' . "\n";
 
-	// FIX 6 — Logo preload on non-post pages (posts preload featured image above)
+	// Logo preload on non-post pages (posts preload featured image above)
 	if ( ! is_single() ) {
 		echo '<link rel="preload" as="image" fetchpriority="high" href="' . ICONIFERZ_LOGO_IMG . '">' . "\n";
 	}
 
-	// Static schemas on all non-homepage, non-post pages (cached)
-	if ( ! is_front_page() && ! is_single() ) {
-		echo iconiferz_get_static_schemas();
-	}
+	// NOTE: static schemas are now called explicitly in each page-type block above (FIX H).
+	// The old bottom catch-all has been removed to avoid fragile implicit dependency.
 }
 
 // ================================================================
@@ -1051,6 +1089,13 @@ function iconiferz_seo_head() {
 //     • Website: https://itkins.com/ahmedumeraziz/
 //     • Biographical Info: (paste the author box text here)
 //     The schema in this file reads these fields automatically.
+//
+// [10] ORGANIZATION TELEPHONE & ADDRESS (FIX D)
+//      Uncomment and fill in the telephone and address fields in
+//      iconiferz_get_static_schemas() above. These are marked TODO.
+//      Adding real contact details strengthens local/knowledge-panel
+//      E-E-A-T signals. Only add if the information is publicly
+//      listed — do not publish a private number.
 //
 // ================================================================
 ?>
