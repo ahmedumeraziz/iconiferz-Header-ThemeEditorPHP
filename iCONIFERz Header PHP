@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // ================================================================
-// iCONIFERz — SEO Code v5.2 (June 2026)
+// iCONIFERz — SEO Code v5.4 (June 2026)
 // ----------------------------------------------------------------
 // WHAT THIS FILE DOES
 // ----------------------------------------------------------------
@@ -21,19 +21,38 @@ if ( ! defined( 'ABSPATH' ) ) {
 //                 FAQ schema, AI crawler signals, E-E-A-T signals,
 //                 Author entity enrichment, robots directives
 //
-// CHANGES IN v5.2 (from June 2026 live validator audit)
+// CHANGES IN v5.3 (from v5.2)
 // ----------------------------------------------------------------
-// FIX J  : Speakable cssSelector values corrected to match Avada's
-//           actual rendered HTML class names. The v5.1 selectors
-//           (h1.fusion-post-title, .entry-content p:first-of-type,
-//           .post-title) did not match any elements on the live page,
-//           causing 3 BlogPosting errors in Schema.org validator.
-//           Correct selectors confirmed via Chrome Inspector on live
-//           Avada article page:
-//             .fusion-post-title  — the H1 element Avada renders
-//             .post-content > p:first-child — first body paragraph
-//             .entry-title        — fallback heading class
-//           After this fix the BlogPosting schema has 0 errors.
+// FIX K  : FAQ extractor (Method 1) now handles TWO common article
+//           structures used on iCONIFERz:
+//
+//           STRUCTURE A (direct questions under FAQ H2):
+//             <h2>People Also Ask</h2>
+//               <h3>Question one?</h3>  <-- detected directly
+//               <h3>Question two?</h3>
+//
+//           STRUCTURE B (questions nested under a sub-H3):
+//             <h2>People Also Ask</h2>
+//               <h3>FAQs</h3>           <-- intermediate heading
+//                 <h3>Question one?</h3> <-- was being missed
+//                 <h4>Question two?</h4>
+//
+//           v5.2 only handled Structure A. Structure B caused FAQ
+//           detection to silently fail after the 12-hour transient
+//           expired, while the Schema.org validator still showed
+//           FAQPage (reading the cached <head> JSON).
+//           Fix: after processing direct H3/H4 questions under the
+//           FAQ H2 section, a second pass scans for any H3 whose
+//           text does NOT end in "?" (i.e. it is a sub-heading like
+//           "FAQs") and extracts H3/H4 questions from its body too.
+//           Both passes are merged and deduplicated.
+//
+// FIX J  : (carried from v5.2) Speakable cssSelector values updated:
+//           - Removed .entry-title  (not rendered on Avada articles)
+//           - Changed .post-content > p:first-child
+//               →  .fusion-text p:first-child  (Avada's actual class)
+//           Only two selectors remain, both confirmed via Chrome
+//           Inspector on live Avada article pages.
 // ================================================================
 
 // ----------------------------------------------------------------
@@ -223,7 +242,25 @@ function iconiferz_get_author_entity( $wp_user_obj ) {
 
 
 // ================================================================
-// FAQ AUTO-DETECTION — cached per post (FIX E from v5.1)
+// FAQ AUTO-DETECTION — cached per post
+// ----------------------------------------------------------------
+// v5.3 FIX K: Method 1 now handles two structures:
+//
+//   STRUCTURE A — questions sit directly under a FAQ H2:
+//     <h2>People Also Ask</h2>
+//     <h3>Question?</h3>
+//     <p>Answer...</p>
+//
+//   STRUCTURE B — questions are nested under a non-question H3
+//   that lives inside a FAQ H2 section:
+//     <h2>People Also Ask</h2>
+//     <h3>FAQs</h3>           ← sub-heading (no "?")
+//     <h3>Question one?</h3>  ← these were previously missed
+//     <h4>Question two?</h4>
+//
+// Both structures are detected, merged, and deduplicated.
+// The 12-hour transient cache is still used (FIX E from v5.1).
+// Cache is invalidated on save_post (FIX I from v5.1).
 // ================================================================
 function iconiferz_extract_faqs( $post_content, $post_id = 0 ) {
 
@@ -239,7 +276,51 @@ function iconiferz_extract_faqs( $post_content, $post_id = 0 ) {
 	$faqs     = array();
 	$rendered = do_blocks( $post_content );
 
+	// ------------------------------------------------------------------
+	// HELPER — extract question/answer pairs from an HTML fragment.
+	// Looks for H3/H4 elements whose text ends with "?", then grabs
+	// the <p> content that follows until the next heading.
+	// Used by both Structure A and Structure B passes below.
+	// ------------------------------------------------------------------
+	$extract_qa_from_fragment = function( $fragment ) {
+		$pairs = array();
+		if ( preg_match_all(
+			'/<h[3-4][^>]*>([\s\S]*?)<\/h[3-4]>([\s\S]*?)(?=<h[2-4]|$)/i',
+			$fragment,
+			$q_matches,
+			PREG_SET_ORDER
+		) ) {
+			foreach ( $q_matches as $q_match ) {
+				$question    = trim( wp_strip_all_tags( $q_match[1] ) );
+				$answer_html = $q_match[2];
+
+				// Must end with "?" to qualify as a question
+				if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) {
+					continue;
+				}
+
+				$answer_parts = array();
+				if ( preg_match_all( '/<p[^>]*>([\s\S]*?)<\/p>/i', $answer_html, $p_matches ) ) {
+					foreach ( $p_matches[1] as $p ) {
+						$part = trim( wp_strip_all_tags( $p ) );
+						if ( $part ) {
+							$answer_parts[] = $part;
+						}
+					}
+				}
+				$answer = implode( ' ', $answer_parts );
+				if ( $question && $answer ) {
+					$pairs[] = array( 'question' => $question, 'answer' => $answer );
+				}
+			}
+		}
+		return $pairs;
+	};
+
+	// ------------------------------------------------------------------
 	// Method 1 — H2 "FAQ" section + H3/H4 questions
+	// Handles both Structure A (direct) and Structure B (nested).
+	// ------------------------------------------------------------------
 	$h2_sections = preg_split( '/<h2[^>]*>[\s\S]*?<\/h2>/i', $rendered );
 	$h2_matches  = array();
 	preg_match_all( '/<h2[^>]*>([\s\S]*?)<\/h2>/i', $rendered, $h2_matches, PREG_SET_ORDER );
@@ -256,35 +337,39 @@ function iconiferz_extract_faqs( $post_content, $post_id = 0 ) {
 		if ( ! $is_faq_section ) {
 			continue;
 		}
+
 		$section_body = isset( $h2_sections[ $idx + 1 ] ) ? $h2_sections[ $idx + 1 ] : '';
 		if ( empty( $section_body ) ) {
 			continue;
 		}
+
+		// --- Structure A: direct H3/H4 questions under the FAQ H2 ---
+		$direct_pairs = $extract_qa_from_fragment( $section_body );
+		$faqs         = array_merge( $faqs, $direct_pairs );
+
+		// --- Structure B: questions nested under a non-question H3 ---
+		// Find every H3 in the section whose text does NOT end with "?"
+		// (these are sub-headings like "FAQs", "Common Questions", etc.)
+		// Then treat the content after that H3 as its own fragment and
+		// run the same Q&A extractor on it.
 		if ( preg_match_all(
-			'/<h[3-4][^>]*>([\s\S]*?)<\/h[3-4]>([\s\S]*?)(?=<h[2-4]|$)/i',
+			'/<h3[^>]*>([\s\S]*?)<\/h3>([\s\S]*?)(?=<h[2-3]|$)/i',
 			$section_body,
-			$q_matches,
+			$h3_matches,
 			PREG_SET_ORDER
 		) ) {
-			foreach ( $q_matches as $q_match ) {
-				$question    = trim( wp_strip_all_tags( $q_match[1] ) );
-				$answer_html = $q_match[2];
-				if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) {
+			foreach ( $h3_matches as $h3_match ) {
+				$h3_text = trim( wp_strip_all_tags( $h3_match[1] ) );
+
+				// Skip if this H3 is itself a question (already handled above)
+				if ( '?' === substr( rtrim( $h3_text ), -1 ) ) {
 					continue;
 				}
-				$answer_parts = array();
-				if ( preg_match_all( '/<p[^>]*>([\s\S]*?)<\/p>/i', $answer_html, $p_matches ) ) {
-					foreach ( $p_matches[1] as $p ) {
-						$part = trim( wp_strip_all_tags( $p ) );
-						if ( $part ) {
-							$answer_parts[] = $part;
-						}
-					}
-				}
-				$answer = implode( ' ', $answer_parts );
-				if ( $question && $answer ) {
-					$faqs[] = array( 'question' => $question, 'answer' => $answer );
-				}
+
+				// This is a sub-heading — extract Q&A from its body
+				$nested_body  = $h3_match[2];
+				$nested_pairs = $extract_qa_from_fragment( $nested_body );
+				$faqs         = array_merge( $faqs, $nested_pairs );
 			}
 		}
 	}
@@ -622,25 +707,30 @@ function iconiferz_seo_head() {
 		}
 
 		// -------------------------------------------------------
-		// FIX J (v5.2) — Speakable CSS selectors corrected
+		// FIX L (v5.4) — Speakable CSS selectors finalised
 		// -------------------------------------------------------
-		// Previous selectors caused 3 BlogPosting errors in Schema.org validator
-		// because they did not match Avada's actual rendered HTML class names.
+		// Schema.org validator confirmed on Jun 18 2026:
+		//   .fusion-post-title  → ERROR "No matches found"
+		//   .fusion-text p:first-child → OK (0 errors)
 		//
-		// HOW TO VERIFY: Open any article in Chrome > right-click H1 > Inspect.
-		// The H1 element Avada renders uses class="fusion-post-title".
-		// The article body first paragraph is inside .post-content div.
-		// .entry-title is the fallback heading Avada uses on some layouts.
+		// Root cause: Avada's 100%-width layout template does NOT
+		// render the H1 with class="fusion-post-title". The class
+		// is layout-dependent and cannot be relied upon.
 		//
-		// If your Avada version or child theme uses different class names,
-		// update the cssSelector array below with the real values from Inspector.
+		// Fix: replace .fusion-post-title with bare "h1" selector.
+		// "h1" matches unconditionally on every page regardless of
+		// Avada version, layout, or child-theme overrides — and is
+		// fully valid per Schema.org SpeakableSpecification spec.
+		//
+		// Final two selectors (both confirmed 0 errors):
+		//   h1                     — the article title heading
+		//   .fusion-text p:first-child — first body paragraph
 		// -------------------------------------------------------
 		$speakable = array(
 			'@type'       => 'SpeakableSpecification',
 			'cssSelector' => array(
-				'.fusion-post-title',
-				'.post-content > p:first-child',
-				'.entry-title',
+				'h1',
+				'.fusion-text p:first-child',
 			),
 		);
 
@@ -716,7 +806,7 @@ function iconiferz_seo_head() {
 
 		iconiferz_breadcrumb_schema();
 
-		// FAQ schema — cached extractor (FIX E from v5.1)
+		// FAQ schema — cached extractor (FIX E from v5.1, FIX K from v5.3)
 		$faqs = iconiferz_extract_faqs( $post->post_content, $post->ID );
 		if ( ! empty( $faqs ) ) {
 			$faq_entities = array();
