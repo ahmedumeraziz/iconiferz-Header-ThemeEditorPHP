@@ -966,6 +966,29 @@ if ( ! function_exists( 'iconiferz_seo_head' ) ) {
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 	<?php Avada()->head->the_viewport(); ?>
 
+	<!-- ==========================================
+	     MOBILE CLS ACCELERATOR (CRITICAL INLINE CSS)
+	     ========================================== -->
+	<style>
+  @media only screen and (max-width: 800px) {
+    /* Prevent layout shifting by reserving header space */
+    .fusion-mobile-menu-wrapper, 
+    .fusion-header-wrapper, 
+    #header,
+    .fusion-header {
+      min-height: 70px !important;
+      contain-intrinsic-size: 70px;
+    }
+    /* Defer rendering of non-critical off-screen elements */
+    .fusion-footer, 
+    #footer, 
+    .fusion-sliding-bar-wrapper { 
+      content-visibility: auto; 
+      contain-intrinsic-size: 300px;
+    }
+  }
+</style>
+
 	<?php wp_head(); ?>
 	<?php
 	echo apply_filters( 'avada_space_head', Avada()->settings->get( 'space_head' ) ); // phpcs:ignore WordPress.Security.EscapeOutput
