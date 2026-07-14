@@ -943,15 +943,19 @@ if ( ! function_exists( 'iconiferz_seo_head' ) ) {
 			echo '<script type="application/ld+json">' . wp_json_encode( $unified_payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . '</script>' . "\n";
 		}
 
-		// ---------------------------------------------------------------
-		// SPEED — Preconnect & DNS Prefetch Assets
-		// ---------------------------------------------------------------
+// ===============================================================
+		// SPEED — Preconnect & DNS Prefetch Assets (FIXED SYNTAX)
+		// ===============================================================
 		echo '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n";
 		echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n";
+		echo '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">' . "\n";
 		echo '<link rel="dns-prefetch" href="//fonts.googleapis.com">' . "\n";
 		echo '<link rel="dns-prefetch" href="//fonts.gstatic.com">' . "\n";
 		echo '<link rel="dns-prefetch" href="//www.google-analytics.com">' . "\n";
 		echo '<link rel="dns-prefetch" href="//www.googletagmanager.com">' . "\n";
+		
+		// NEW: Preload the main style sheet dynamically to reduce render blocking
+		echo '<link rel="preload" href="' . get_stylesheet_uri() . '" as="style">' . "\n";
 
 		if ( ! is_single() ) {
 			echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( ICONIFERZ_LOGO_IMG ) . '">' . "\n";
