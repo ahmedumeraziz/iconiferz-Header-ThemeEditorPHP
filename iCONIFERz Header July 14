@@ -21,7 +21,7 @@ if ( is_404() && ! headers_sent() ) {
 }
 
 // ================================================================
-// iCONIFERz — SEO & Schema Optimization Code v6.1 (Production)
+// iCONIFERz — SEO & Schema Optimization Code v6.2 (Upgraded)
 // ================================================================
 
 // ----------------------------------------------------------------
@@ -34,7 +34,7 @@ if ( ! defined( 'ICONIFERZ_LOGO_IMG' ) ) {
 	define( 'ICONIFERZ_LOGO_IMG', 'https://iconiferz.com/wp-content/uploads/2025/07/iCONIFERz-Logo.webp' );
 }
 if ( ! defined( 'ICONIFERZ_SITE_URL' ) ) {
-	define( 'ICONIFERZ_SITE_URL', 'https://iconiferz.com' );
+	define( 'ICONIFERZ_SITE_URL', untrailingslashit( home_url() ) );
 }
 
 // Hide WordPress version generator footprint
@@ -46,7 +46,8 @@ add_filter( 'avada_meta_og', '__return_false' );
 add_filter( 'avada_og_image', '__return_false' );
 add_filter( 'avada_meta_description', '__return_false' );
 
-if ( class_exists( 'Avada' ) && isset( Avada()->head ) ) {
+// Hardened Avada check to prevent PHP Warnings on theme updates
+if ( class_exists( 'Avada' ) && isset( Avada()->head ) && is_object( Avada()->head ) ) {
 	remove_action( 'wp_head', array( Avada()->head, 'insert_og_meta' ), 5 );
 	remove_action( 'wp_head', array( Avada()->head, 'add_og_meta_output' ), 5 );
 	remove_action( 'wp_head', array( Avada()->head, 'insert_seo_meta' ), 5 );
@@ -62,7 +63,6 @@ add_filter( 'document_title_parts', function( $title_parts ) {
 	}
 	return $title_parts;
 }, 999 );
-
 add_action( 'wp_head', 'iconiferz_seo_head', 1 );
 
 
@@ -194,16 +194,16 @@ if ( ! function_exists( 'iconiferz_get_author_entity' ) ) {
 			'sameAs'      => array(),
 			'worksFor'    => array( '@id' => ICONIFERZ_SITE_URL . '/#organization' ),
 		);
-
+		
 		$entity['image'] = array(
 			'@type' => 'ImageObject',
 			'url'   => get_avatar_url( $wp_user_obj->ID, array( 'size' => 300 ) ),
 		);
-
+		
 		$linkedin = get_the_author_meta( 'linkedin', $wp_user_obj->ID );
 		$facebook = get_the_author_meta( 'facebook', $wp_user_obj->ID );
 		$twitter  = get_the_author_meta( 'twitter', $wp_user_obj->ID );
-
+		
 		if ( ! empty( $linkedin ) ) { $entity['sameAs'][] = esc_url( $linkedin ); }
 		if ( ! empty( $facebook ) ) { $entity['sameAs'][] = esc_url( $facebook ); }
 		if ( ! empty( $twitter ) )  { $entity['sameAs'][] = esc_url( $twitter ); }
@@ -237,7 +237,7 @@ if ( ! function_exists( 'iconiferz_extract_faqs' ) ) {
 		$faqs = array();
 		// SPEED BOOST: Strip shortcodes to parse plain text strings instead of executing heavy do_blocks engine
 		$rendered = strip_shortcodes( $post_content );
-
+		
 		$extract_qa_from_fragment = function( $fragment ) {
 			$pairs = array();
 			if ( preg_match_all( '/<h[3-4][^>]*>([\s\S]*?)<\/h[3-4]>([\s\S]*?)(?=<h[2-4]|$)/i', $fragment, $q_matches, PREG_SET_ORDER ) ) {
@@ -260,11 +260,11 @@ if ( ! function_exists( 'iconiferz_extract_faqs' ) ) {
 			}
 			return $pairs;
 		};
-
+		
 		$h2_sections = preg_split( '/<h2[^>]*>[\s\S]*?<\/h2>/i', $rendered );
 		$h2_matches  = array();
 		preg_match_all( '/<h2[^>]*>([\s\S]*?)<\/h2>/i', $rendered, $h2_matches, PREG_SET_ORDER );
-
+		
 		foreach ( $h2_matches as $idx => $h2_match ) {
 			$h2_text        = trim( wp_strip_all_tags( $h2_match[1] ) );
 			$is_faq_section = (
@@ -274,6 +274,7 @@ if ( ! function_exists( 'iconiferz_extract_faqs' ) ) {
 				stripos( $h2_text, 'common questions' ) !== false ||
 				stripos( $h2_text, 'questions' ) !== false
 			);
+			
 			if ( ! $is_faq_section ) { continue; }
 
 			$section_body = isset( $h2_sections[ $idx + 1 ] ) ? $h2_sections[ $idx + 1 ] : '';
@@ -281,7 +282,7 @@ if ( ! function_exists( 'iconiferz_extract_faqs' ) ) {
 
 			$direct_pairs = $extract_qa_from_fragment( $section_body );
 			$faqs         = array_merge( $faqs, $direct_pairs );
-
+			
 			if ( preg_match_all( '/<h3[^>]*>([\s\S]*?)<\/h3>([\s\S]*?)(?=<h[2-3]|$)/i', $section_body, $h3_matches, PREG_SET_ORDER ) ) {
 				foreach ( $h3_matches as $h3_match ) {
 					$h3_text = trim( wp_strip_all_tags( $h3_match[1] ) );
@@ -299,6 +300,7 @@ if ( ! function_exists( 'iconiferz_extract_faqs' ) ) {
 					$question    = trim( wp_strip_all_tags( $match[1] ) );
 					$answer_html = $match[2];
 					if ( ! $question || '?' !== substr( rtrim( $question ), -1 ) ) { continue; }
+					
 					$answer_parts = array();
 					if ( preg_match_all( '/<p[^>]*>([\s\S]*?)<\/p>/i', $answer_html, $p_matches ) ) {
 						foreach ( $p_matches[1] as $p ) {
@@ -342,7 +344,7 @@ if ( ! function_exists( 'iconiferz_get_breadcrumb_schema_array' ) ) {
 			'name'     => 'Home',
 			'item'     => home_url( '/' ),
 		);
-
+		
 		if ( is_single() ) {
 			$cats = get_the_category( $post_id );
 			if ( ! empty( $cats ) ) {
@@ -405,545 +407,531 @@ if ( ! function_exists( 'iconiferz_get_breadcrumb_schema_array' ) ) {
 if ( ! function_exists( 'iconiferz_seo_head' ) ) {
 	function iconiferz_seo_head() {
 
+		$schema_graph = array();
+
 		if ( is_search() || is_404() || is_date() || is_paged() ) {
 			echo '<meta name="robots" content="noindex, follow">' . "\n";
 			echo '<meta name="GPTBot" content="noindex">' . "\n";
 			echo '<meta name="ClaudeBot" content="noindex">' . "\n";
 			echo '<meta name="PerplexityBot" content="noindex">' . "\n";
-			return;
-		}
+		} else {
+			echo '<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">' . "\n";
+			echo '<meta name="GPTBot" content="index">' . "\n";
+			echo '<meta name="ClaudeBot" content="index">' . "\n";
+			echo '<meta name="PerplexityBot" content="index">' . "\n";
+			echo '<link rel="llms-txt" href="' . esc_url( ICONIFERZ_SITE_URL ) . '/llms.txt">' . "\n";
+			
+			// STRICT CANONICAL RULE
+			$canonical_url = '';
+			$post_id       = get_queried_object_id();
 
-		echo '<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">' . "\n";
-		echo '<meta name="GPTBot" content="index">' . "\n";
-		echo '<meta name="ClaudeBot" content="index">' . "\n";
-		echo '<meta name="PerplexityBot" content="index">' . "\n";
-		echo '<link rel="llms-txt" href="' . esc_url( ICONIFERZ_SITE_URL ) . '/llms.txt">' . "\n";
-
-		// STRICT CANONICAL RULE — Fixes Trailing Slashes, WWW, & URL Bloat
-		$canonical_url = '';
-		$post_id       = get_queried_object_id();
-
-		if ( is_front_page() || is_home() ) {
-			$canonical_url = trailingslashit( ICONIFERZ_SITE_URL );
-		} elseif ( is_singular() ) {
-			$canonical_url = get_permalink( $post_id );
-		} elseif ( is_category() ) {
-			$canonical_url = get_category_link( $post_id );
-		} elseif ( is_tag() ) {
-			$canonical_url = get_tag_link( $post_id );
-		} elseif ( is_author() ) {
-			$canonical_url = get_author_posts_url( $post_id );
-		}
-
-		if ( ! empty( $canonical_url ) ) {
-			echo '<link rel="canonical" href="' . esc_url( $canonical_url ) . '">' . "\n";
-		}
-
-		echo '<meta name="author" content="iCONIFERz">' . "\n";
-		echo '<meta property="og:site_name" content="iCONIFERz">' . "\n";
-		echo '<meta property="og:locale" content="en_US">' . "\n";
-
-		// Initialize Unified Schema Graph Collection array
-		$schema_graph   = array();
-		$schema_graph[] = iconiferz_get_org_schema();
-		$schema_graph[] = iconiferz_get_website_schema();
-
-		$breadcrumbs_arr = iconiferz_get_breadcrumb_schema_array();
-		if ( $breadcrumbs_arr ) {
-			$schema_graph[] = $breadcrumbs_arr;
-		}
-
-		// ---------------------------------------------------------------
-		// HOMEPAGE
-		// ---------------------------------------------------------------
-		if ( is_front_page() ) {
-			$hp_title = esc_attr( get_bloginfo('name') . ' – ' . get_bloginfo('description') );
-			$hp_desc  = 'Daily technology news covering AI, cybersecurity, mobile tech, blockchain, robotics and more. Trusted by readers since 2019. Updated every day.';
-			echo '<meta name="description" content="' . esc_attr( $hp_desc ) . '">' . "\n";
-			echo '<meta property="og:type" content="website">' . "\n";
-			echo '<meta property="og:title" content="' . $hp_title . '">' . "\n";
-			echo '<meta property="og:description" content="' . esc_attr( $hp_desc ) . '">' . "\n";
-			echo '<meta property="og:url" content="' . esc_url( ICONIFERZ_SITE_URL ) . '/">' . "\n";
-			echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
-			echo '<meta property="og:image:type" content="image/webp">' . "\n";
-			echo '<meta property="og:image:width" content="1200">' . "\n";
-			echo '<meta property="og:image:height" content="630">' . "\n";
-			echo '<meta property="og:image:alt" content="iCONIFERz – Technology News &amp; Insights">' . "\n";
-
-			// Twitter/X Cards Branding Link
-			echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
-			echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
-			echo '<meta name="twitter:title" content="' . $hp_title . '">' . "\n";
-			echo '<meta name="twitter:description" content="' . esc_attr( $hp_desc ) . '">' . "\n";
-			echo '<meta name="twitter:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
-
-			$schema_graph[] = array(
-				'@type'        => 'WebPage',
-				'@id'          => ICONIFERZ_SITE_URL . '/#webpage',
-				'name'         => 'Daily Technology News & Expert Insights | iCONIFERz',
-				'url'          => ICONIFERZ_SITE_URL . '/',
-				'description'  => 'Stay ahead with iCONIFERz – your trusted source for technology news covering AI, cybersecurity, mobile tech, and innovation. Updated daily since 2019.',
-				'inLanguage'   => 'en-US',
-				'isPartOf'     => array( '@id' => ICONIFERZ_SITE_URL . '/#website' ),
-				'publisher'    => array( '@id' => ICONIFERZ_SITE_URL . '/#organization' ),
-				'dateModified' => get_lastpostmodified( 'c' ),
-			);
-		}
-
-		// ---------------------------------------------------------------
-		// SINGLE POSTS
-		// ---------------------------------------------------------------
-		if ( is_single() ) {
-			$post_obj = get_post( $post_id );
-			if ( $post_obj ) {
-				$post_url    = esc_url( get_permalink( $post_id ) );
-				$pub_date    = get_the_date( 'c', $post_id );
-				$mod_date    = get_the_modified_date( 'c', $post_id );
-				$author_obj  = get_userdata( $post_obj->post_author );
-				
-				// 1. Fetch Custom Avada Data
-				$avada_seo_title = iconiferz_get_avada_seo_meta( $post_id, 'seo_title' );
-				$avada_meta_desc = iconiferz_get_avada_seo_meta( $post_id, 'meta_description' );
-				$avada_og_image  = iconiferz_get_avada_seo_meta( $post_id, 'open_graph_image' );
-
-				// Title Assignment
-				$og_title = ! empty( $avada_seo_title ) ? esc_attr( wp_strip_all_tags( $avada_seo_title ) ) : esc_attr( get_the_title( $post_id ) );
-
-				// Description Generation - Fixed Avada shortcodes leakage
-				if ( ! empty( $avada_meta_desc ) ) {
-					$post_exc = esc_attr( wp_strip_all_tags( $avada_meta_desc ) );
-				} else {
-					$raw_excerpt = has_excerpt( $post_id ) ? get_the_excerpt( $post_id ) : '';
-					if ( ! empty( $raw_excerpt ) ) {
-						$post_exc = esc_attr( wp_strip_all_tags( $raw_excerpt ) );
-					} else {
-						$clean_content = strip_shortcodes( $post_obj->post_content );
-						$post_exc      = esc_attr( wp_trim_words( wp_strip_all_tags( $clean_content ), 30 ) );
-					}
-				}
-
-				// Featured Image Configuration
-				$thumb_id = get_post_thumbnail_id( $post_id );
-				$post_img = get_the_post_thumbnail_url( $post_id, 'full' );
-				
-				if ( ! empty( $avada_og_image ) ) {
-					$og_img_url  = esc_url( $avada_og_image );
-					$og_thumb_id = attachment_url_to_postid( $avada_og_image );
-					
-					$img_src    = $og_thumb_id ? wp_get_attachment_image_src( $og_thumb_id, 'full' ) : false;
-					$img_width  = $img_src ? (int) $img_src[1] : 1200;
-					$img_height = $img_src ? (int) $img_src[2] : 630;
-					$img_mime   = iconiferz_get_image_mime( $og_thumb_id );
-				} elseif ( $post_img ) {
-					$og_img_url = esc_url( $post_img );
-					$img_src    = wp_get_attachment_image_src( $thumb_id, 'full' );
-					$img_width  = $img_src ? (int) $img_src[1] : 1200;
-					$img_height = $img_src ? (int) $img_src[2] : 630;
-					$img_mime   = iconiferz_get_image_mime( $thumb_id );
-				} else {
-					$og_img_url = false;
-				}
-
-				$cats        = get_the_category( $post_id );
-				$primary_cat = ! empty( $cats ) ? esc_attr( $cats[0]->name ) : '';
-
-				$tags_list = get_the_tags( $post_id );
-				$tag_names = array();
-				if ( $tags_list && ! is_wp_error( $tags_list ) ) {
-					foreach ( $tags_list as $t ) {
-						$tag_names[] = esc_attr( $t->name );
-					}
-				}
-
-				$word_count = str_word_count( wp_strip_all_tags( strip_shortcodes( $post_obj->post_content ) ) );
-
-				echo '<meta name="description" content="' . $post_exc . '">' . "\n";
-				echo '<meta property="og:type" content="article">' . "\n";
-				echo '<meta property="og:title" content="' . $og_title . '">' . "\n";
-				echo '<meta property="og:description" content="' . $post_exc . '">' . "\n";
-				echo '<meta property="og:url" content="' . $post_url . '">' . "\n";
-
-				if ( $og_img_url ) {
-					echo '<meta property="og:image" content="' . esc_url( $og_img_url ) . '">' . "\n";
-					echo '<meta property="og:image:type" content="' . $img_mime . '">' . "\n";
-					echo '<meta property="og:image:width" content="' . $img_width . '">' . "\n";
-					echo '<meta property="og:image:height" content="' . $img_height . '">' . "\n";
-					echo '<meta property="og:image:alt" content="' . $og_title . '">' . "\n";
-				} else {
-					echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
-					echo '<meta property="og:image:type" content="image/webp">' . "\n";
-					echo '<meta property="og:image:width" content="1200">' . "\n";
-					echo '<meta property="og:image:height" content="630">' . "\n";
-					echo '<meta property="og:image:alt" content="iCONIFERz – Technology News &amp; Insights">' . "\n";
-				}
-
-				// Twitter Cards Integration
-				echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
-				echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
-				echo '<meta name="twitter:title" content="' . $og_title . '">' . "\n";
-				echo '<meta name="twitter:description" content="' . $post_exc . '">' . "\n";
-				echo '<meta name="twitter:image" content="' . esc_url( $og_img_url ? $og_img_url : ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
-
-				echo '<meta property="article:published_time" content="' . $pub_date . '">' . "\n";
-				echo '<meta property="article:modified_time" content="' . $mod_date . '">' . "\n";
-				
-				echo '<meta property="article:author" content="https://www.linkedin.com/in/ahmedumeraziz/">' . "\n";
-
-				if ( $primary_cat ) {
-					echo '<meta property="article:section" content="' . $primary_cat . '">' . "\n";
-				}
-				foreach ( $tag_names as $tag ) {
-					echo '<meta property="article:tag" content="' . $tag . '">' . "\n";
-				}
-
-				$author_entity = iconiferz_get_author_entity( $author_obj );
-				$about_entities = array();
-				if ( ! empty( $tags_list ) && ! is_wp_error( $tags_list ) ) {
-					foreach ( $tags_list as $t ) {
-						$about_entities[] = array( '@type' => 'Thing', 'name' => $t->name );
-					}
-				}
-
-				$speakable = array(
-					'@type'       => 'SpeakableSpecification',
-					'cssSelector' => array( 'h1', '.fusion-text p:first-child' ),
-				);
-
-				$schema_graph[] = array(
-					'@type'       => 'WebPage',
-					'@id'         => $post_url . '#webpage',
-					'url'         => $post_url,
-					'name'        => $og_title,
-					'description' => $post_exc,
-					'isPartOf'    => array( '@id' => ICONIFERZ_SITE_URL . '/#website' ),
-					'breadcrumb'  => $breadcrumbs_arr ? array( '@id' => $post_url . '#breadcrumb' ) : null,
-				);
-
-				$article_schema = array(
-					'@type'            => 'BlogPosting',
-					'@id'              => $post_url . '#article',
-					'isPartOf'         => array( '@id' => $post_url . '#webpage' ),
-					'headline'         => get_the_title( $post_id ),
-					'url'              => $post_url,
-					'datePublished'    => $pub_date,
-					'dateModified'     => $mod_date,
-					'wordCount'        => $word_count,
-					'inLanguage'       => 'en-US',
-					'author'           => $author_entity,
-					'publisher'        => array( '@id' => ICONIFERZ_SITE_URL . '/#organization' ),
-					'description'      => $post_exc,
-					'mainEntityOfPage' => array( '@id' => $post_url . '#webpage' ),
-					'copyrightYear'    => (int) get_the_date( 'Y', $post_id ),
-					'copyrightHolder'  => array( '@id' => ICONIFERZ_SITE_URL . '/#organization' ),
-					'speakable'        => $speakable,
-					'accessMode'       => array( 'textual', 'visual' ),
-					'accessibilityFeature' => array( 'alternativeText', 'readingOrder' ),
-				);
-
-				if ( ! empty( $tag_names ) ) {
-					$article_schema['keywords'] = implode( ', ', array_map( 'wp_strip_all_tags', $tag_names ) );
-				}
-				if ( ! empty( $about_entities ) ) {
-					$article_schema['about'] = $about_entities;
-				}
-				if ( $post_img ) {
-					$article_schema['image'] = array(
-						'@type' => 'ImageObject',
-						'url'   => $post_img,
-					);
-				}
-
-				$sources_raw = get_post_meta( $post_id, '_iconiferz_sources', true );
-				if ( $sources_raw ) {
-					$source_urls = array_filter( array_map( 'trim', explode( '||', $sources_raw ) ) );
-					$citations   = array();
-					foreach ( $source_urls as $src_url ) {
-						$citations[] = array( '@type' => 'CreativeWork', 'url' => esc_url( $src_url ) );
-					}
-					if ( ! empty( $citations ) ) {
-						$article_schema['citation'] = $citations;
-					}
-				}
-
-				$schema_graph[] = $article_schema;
-
-				$faqs = iconiferz_extract_faqs( $post_obj->post_content, $post_id );
-				if ( ! empty( $faqs ) ) {
-					$faq_entities = array();
-					foreach ( $faqs as $faq ) {
-						$faq_entities[] = array(
-							'@type'          => 'Question',
-							'name'           => $faq['question'],
-							'acceptedAnswer' => array(
-								'@type' => 'Answer',
-								'text'  => $faq['answer'],
-							),
-						);
-					}
-					$schema_graph[] = array(
-						'@type'      => 'FAQPage',
-						'@id'        => $post_url . '#faq',
-						'isPartOf'   => array( '@id' => $post_url . '#webpage' ),
-						'mainEntity' => $faq_entities,
-					);
-				}
-
-				// SPEED: Smart LCP Asset Preload Control (Checks if featured image is globally hidden inside layout)
-				$show_featured = true;
-				if ( function_exists( 'fusion_get_page_option' ) ) {
-					$show_opt = fusion_get_page_option( 'show_first_featured_image', $post_id );
-					if ( 'no' === $show_opt || '0' === $show_opt ) {
-						$show_featured = false;
-					}
-				}
-
-				if ( $show_featured && $post_img && $thumb_id ) {
-					$srcset = wp_get_attachment_image_srcset( $thumb_id, 'full' );
-					$sizes  = wp_get_attachment_image_sizes( $thumb_id, 'full' );
-					if ( $srcset && $sizes ) {
-						echo '<link rel="preload" as="image" fetchpriority="high"'
-							. ' href="' . esc_url( $post_img ) . '"'
-							. ' imagesrcset="' . esc_attr( $srcset ) . '"'
-							. ' imagesizes="' . esc_attr( $sizes ) . '">' . "\n";
-					} else {
-						echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( $post_img ) . '">' . "\n";
-					}
-				}
+			if ( is_front_page() || is_home() ) {
+				$canonical_url = trailingslashit( ICONIFERZ_SITE_URL );
+			} elseif ( is_singular() ) {
+				$canonical_url = get_permalink( $post_id );
+			} elseif ( is_category() ) {
+				$canonical_url = get_category_link( $post_id );
+			} elseif ( is_tag() ) {
+				$canonical_url = get_tag_link( $post_id );
+			} elseif ( is_author() ) {
+				$canonical_url = get_author_posts_url( $post_id );
 			}
-		}
 
-		// ---------------------------------------------------------------
-		// CATEGORY PAGES
-		// ---------------------------------------------------------------
-		if ( is_category() ) {
-			$cat_obj  = get_queried_object();
-			$cat_name = esc_attr( $cat_obj->name );
-			$cat_url  = esc_url( get_category_link( $cat_obj->term_id ) );
-			$cat_desc = strip_tags( $cat_obj->description );
-			$cat_og   = $cat_desc
-				? esc_attr( $cat_desc )
-				: 'Browse all ' . $cat_name . ' articles on iCONIFERz – latest technology news and expert insights.';
+			if ( ! empty( $canonical_url ) ) {
+				echo '<link rel="canonical" href="' . esc_url( $canonical_url ) . '">' . "\n";
+			}
 
-			echo '<meta name="description" content="' . $cat_og . '">' . "\n";
-			echo '<meta property="og:type" content="website">' . "\n";
-			echo '<meta property="og:title" content="' . $cat_name . ' News &amp; Insights | iCONIFERz">' . "\n";
-			echo '<meta property="og:description" content="' . $cat_og . '">' . "\n";
-			echo '<meta property="og:url" content="' . $cat_url . '">' . "\n";
-			echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
-			echo '<meta property="og:image:type" content="image/webp">' . "\n";
-			echo '<meta property="og:image:width" content="1200">' . "\n";
-			echo '<meta property="og:image:height" content="630">' . "\n";
-			echo '<meta property="og:image:alt" content="' . $cat_name . ' – iCONIFERz">' . "\n";
+			echo '<meta name="author" content="iCONIFERz">' . "\n";
+			echo '<meta property="og:site_name" content="iCONIFERz">' . "\n";
+			echo '<meta property="og:locale" content="en_US">' . "\n";
+			
+			// Initialize Unified Schema Graph Collection array
+			$schema_graph[] = iconiferz_get_org_schema();
+			$schema_graph[] = iconiferz_get_website_schema();
 
-			// Twitter Cards Integration
-			echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
-			echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
-			echo '<meta name="twitter:title" content="' . $cat_name . ' News &amp; Insights | iCONIFERz">' . "\n";
-			echo '<meta name="twitter:description" content="' . $cat_og . '">' . "\n";
-			echo '<meta name="twitter:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+			$breadcrumbs_arr = iconiferz_get_breadcrumb_schema_array();
+			if ( $breadcrumbs_arr ) {
+				$schema_graph[] = $breadcrumbs_arr;
+			}
 
-			$schema_graph[] = array(
-				'@type'       => 'CollectionPage',
-				'@id'         => $cat_url . '#collection',
-				'name'        => $cat_name . ' News & Insights | iCONIFERz',
-				'url'         => $cat_url,
-				'description' => wp_strip_all_tags( $cat_og ),
-				'inLanguage'  => 'en-US',
-				'isPartOf'    => array( '@id' => ICONIFERZ_SITE_URL . '/#website' ),
-			);
-		}
-
-		// ---------------------------------------------------------------
-		// AUTHOR ARCHIVE
-		// ---------------------------------------------------------------
-		if ( is_author() ) {
-			$author    = get_queried_object();
-			$auth_name = esc_attr( $author->display_name );
-			$auth_url  = esc_url( get_author_posts_url( $author->ID ) );
-			$auth_bio  = esc_attr( wp_strip_all_tags( $author->description ) );
-			$auth_og   = $auth_bio ? $auth_bio : $auth_name . ' – Technology journalist at iCONIFERz with 13+ years of experience in tech news.';
-
-			echo '<meta name="description" content="' . $auth_og . '">' . "\n";
-			echo '<meta property="og:type" content="website">' . "\n";
-			echo '<meta property="og:title" content="' . $auth_name . ' | Technology Journalist | iCONIFERz">' . "\n";
-			echo '<meta property="og:description" content="' . $auth_og . '">' . "\n";
-			echo '<meta property="og:url" content="' . $auth_url . '">' . "\n";
-			echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
-			echo '<meta property="og:image:type" content="image/webp">' . "\n";
-			echo '<meta property="og:image:width" content="1200">' . "\n";
-			echo '<meta property="og:image:height" content="630">' . "\n";
-			echo '<meta property="og:image:alt" content="' . $auth_name . ' – iCONIFERz Technology Journalist">' . "\n";
-
-			// Twitter Cards Integration
-			echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
-			echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
-			echo '<meta name="twitter:title" content="' . $auth_name . ' | Technology Journalist | iCONIFERz">' . "\n";
-			echo '<meta name="twitter:description" content="' . $auth_og . '">' . "\n";
-			echo '<meta name="twitter:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
-
-			$author_obj    = get_userdata( $author->ID );
-			$person_schema = iconiferz_get_author_entity( $author_obj );
-			$person_schema['mainEntityOfPage'] = array(
-				'@type' => 'WebPage',
-				'@id'   => $auth_url,
-			);
-
-			$schema_graph[] = $person_schema;
-		}
-
-		// ---------------------------------------------------------------
-		// TAG ARCHIVE
-		// ---------------------------------------------------------------
-		if ( is_tag() ) {
-			$tag_obj  = get_queried_object();
-			$tag_name = esc_attr( $tag_obj->name );
-			$tag_url  = esc_url( get_tag_link( $tag_obj->term_id ) );
-			$tag_desc = strip_tags( $tag_obj->description );
-			$tag_og   = $tag_desc
-				? esc_attr( $tag_desc )
-				: 'Articles tagged "' . $tag_name . '" on iCONIFERz – latest technology news and insights.';
-
-			echo '<meta name="description" content="' . $tag_og . '">' . "\n";
-			echo '<meta property="og:type" content="website">' . "\n";
-			echo '<meta property="og:title" content="' . $tag_name . ' | iCONIFERz">' . "\n";
-			echo '<meta property="og:description" content="' . $tag_og . '">' . "\n";
-			echo '<meta property="og:url" content="' . $tag_url . '">' . "\n";
-			echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
-			echo '<meta property="og:image:type" content="image/webp">' . "\n";
-			echo '<meta property="og:image:width" content="1200">' . "\n";
-			echo '<meta property="og:image:height" content="630">' . "\n";
-			echo '<meta property="og:image:alt" content="' . $tag_name . ' – iCONIFERz">' . "\n";
-
-			// Twitter Cards Integration
-			echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
-			echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
-			echo '<meta name="twitter:title" content="' . $tag_name . ' | iCONIFERz">' . "\n";
-			echo '<meta name="twitter:description" content="' . $tag_og . '">' . "\n";
-			echo '<meta name="twitter:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
-
-			$schema_graph[] = array(
-				'@type'       => 'CollectionPage',
-				'@id'         => $tag_url . '#collection',
-				'name'        => $tag_name . ' | iCONIFERz',
-				'url'         => $tag_url,
-				'description' => wp_strip_all_tags( $tag_og ),
-				'inLanguage'  => 'en-US',
-				'isPartOf'    => array( '@id' => ICONIFERZ_SITE_URL . '/#website' ),
-			);
-		}
-
-		// ---------------------------------------------------------------
-		// STATIC PAGES (About, Contact, Privacy, etc.)
-		// ---------------------------------------------------------------
-		if ( is_page() && ! is_front_page() ) {
-			$post_obj = get_post( $post_id );
-			if ( $post_obj ) {
-				$page_url = esc_url( get_permalink( $post_id ) );
-				$page_tid = get_post_thumbnail_id( $post_id );
+			// ---------------------------------------------------------------
+			// HOMEPAGE
+			// ---------------------------------------------------------------
+			if ( is_front_page() ) {
+				$hp_title = esc_attr( get_bloginfo('name') . ' – ' . get_bloginfo('description') );
+				$hp_desc  = 'Daily technology news covering AI, cybersecurity, mobile tech, blockchain, robotics and more. Trusted by readers since 2019. Updated every day.';
 				
-				// 1. Fetch Custom Avada Data
-				$avada_seo_title = iconiferz_get_avada_seo_meta( $post_id, 'seo_title' );
-				$avada_meta_desc = iconiferz_get_avada_seo_meta( $post_id, 'meta_description' );
-				$avada_og_image  = iconiferz_get_avada_seo_meta( $post_id, 'open_graph_image' );
-
-				// 2. Assign Title
-				$page_title = ! empty( $avada_seo_title ) ? esc_attr( wp_strip_all_tags( $avada_seo_title ) ) : esc_attr( get_the_title( $post_id ) );
-
-				// 3. Assign Description - Strip shortcodes fallback
-				if ( ! empty( $avada_meta_desc ) ) {
-					$page_exc = esc_attr( wp_strip_all_tags( $avada_meta_desc ) );
-				} else {
-					$raw_page_exc = has_excerpt( $post_id ) ? get_the_excerpt( $post_id ) : '';
-					if ( ! empty( $raw_page_exc ) ) {
-						$page_exc = esc_attr( wp_strip_all_tags( $raw_page_exc ) );
-					} else {
-						$clean_content = strip_shortcodes( $post_obj->post_content );
-						$page_exc      = esc_attr( wp_trim_words( wp_strip_all_tags( $clean_content ), 30 ) );
-					}
-				}
-
-				echo '<meta name="description" content="' . $page_exc . '">' . "\n";
+				echo '<meta name="description" content="' . esc_attr( $hp_desc ) . '">' . "\n";
 				echo '<meta property="og:type" content="website">' . "\n";
-				echo '<meta property="og:title" content="' . $page_title . ' | iCONIFERz">' . "\n";
-				echo '<meta property="og:description" content="' . $page_exc . '">' . "\n";
-				echo '<meta property="og:url" content="' . $page_url . '">' . "\n";
+				echo '<meta property="og:title" content="' . $hp_title . '">' . "\n";
+				echo '<meta property="og:description" content="' . esc_attr( $hp_desc ) . '">' . "\n";
+				echo '<meta property="og:url" content="' . esc_url( ICONIFERZ_SITE_URL ) . '/">' . "\n";
+				echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+				echo '<meta property="og:image:type" content="image/webp">' . "\n";
+				echo '<meta property="og:image:width" content="1200">' . "\n";
+				echo '<meta property="og:image:height" content="630">' . "\n";
+				echo '<meta property="og:image:alt" content="iCONIFERz – Technology News &amp; Insights">' . "\n";
 
-				$final_og_image = ICONIFERZ_FALLBACK_SOCIAL_IMG;
-				if ( ! empty( $avada_og_image ) ) {
-					$final_og_image = esc_url( $avada_og_image );
-					$og_thumb_id    = attachment_url_to_postid( $avada_og_image );
-					$page_mime      = iconiferz_get_image_mime( $og_thumb_id );
-					echo '<meta property="og:image" content="' . esc_url( $final_og_image ) . '">' . "\n";
-					echo '<meta property="og:image:type" content="' . $page_mime . '">' . "\n";
-					echo '<meta property="og:image:alt" content="' . $page_title . ' – iCONIFERz">' . "\n";
-				} elseif ( $page_tid ) {
-					$page_img       = get_the_post_thumbnail_url( $post_id, 'full' );
-					$final_og_image = esc_url( $page_img );
-					$page_mime      = iconiferz_get_image_mime( $page_tid );
-					echo '<meta property="og:image" content="' . esc_url( $final_og_image ) . '">' . "\n";
-					echo '<meta property="og:image:type" content="' . $page_mime . '">' . "\n";
-					echo '<meta property="og:image:alt" content="' . $page_title . ' – iCONIFERz">' . "\n";
-				} else {
-					echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
-					echo '<meta property="og:image:type" content="image/webp">' . "\n";
-					echo '<meta property="og:image:width" content="1200">' . "\n";
-					echo '<meta property="og:image:height" content="630">' . "\n";
-					echo '<meta property="og:image:alt" content="' . $page_title . ' – iCONIFERz">' . "\n";
+				// Twitter/X Cards Branding Link
+				echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+				echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
+				echo '<meta name="twitter:title" content="' . $hp_title . '">' . "\n";
+				echo '<meta name="twitter:description" content="' . esc_attr( $hp_desc ) . '">' . "\n";
+				echo '<meta name="twitter:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+				
+				$schema_graph[] = array(
+					'@type'        => 'WebPage',
+					'@id'          => ICONIFERZ_SITE_URL . '/#webpage',
+					'name'         => 'Daily Technology News & Expert Insights | iCONIFERz',
+					'url'          => ICONIFERZ_SITE_URL . '/',
+					'description'  => 'Stay ahead with iCONIFERz – your trusted source for technology news covering AI, cybersecurity, mobile tech, and innovation. Updated daily since 2019.',
+					'inLanguage'   => 'en-US',
+					'isPartOf'     => array( '@id' => ICONIFERZ_SITE_URL . '/#website' ),
+					'publisher'    => array( '@id' => ICONIFERZ_SITE_URL . '/#organization' ),
+					'dateModified' => get_the_modified_date( 'c' ),
+				);
+			}
+
+			// ---------------------------------------------------------------
+			// SINGLE POSTS
+			// ---------------------------------------------------------------
+			if ( is_single() ) {
+				$post_obj = get_post( $post_id );
+				if ( $post_obj ) {
+					$post_url    = esc_url( get_permalink( $post_id ) );
+					$pub_date    = get_the_date( 'c', $post_id );
+					$mod_date    = get_the_modified_date( 'c', $post_id );
+					$author_obj  = get_userdata( $post_obj->post_author );
+					
+					// Fetch Custom Avada Data
+					$avada_seo_title = iconiferz_get_avada_seo_meta( $post_id, 'seo_title' );
+					$avada_meta_desc = iconiferz_get_avada_seo_meta( $post_id, 'meta_description' );
+					$avada_og_image  = iconiferz_get_avada_seo_meta( $post_id, 'open_graph_image' );
+
+					$og_title = ! empty( $avada_seo_title ) ? esc_attr( wp_strip_all_tags( $avada_seo_title ) ) : esc_attr( get_the_title( $post_id ) );
+					
+					if ( ! empty( $avada_meta_desc ) ) {
+						$post_exc = esc_attr( wp_strip_all_tags( $avada_meta_desc ) );
+					} else {
+						$raw_excerpt = has_excerpt( $post_id ) ? get_the_excerpt( $post_id ) : '';
+						if ( ! empty( $raw_excerpt ) ) {
+							$post_exc = esc_attr( wp_strip_all_tags( $raw_excerpt ) );
+						} else {
+							$clean_content = strip_shortcodes( $post_obj->post_content );
+							$post_exc      = esc_attr( wp_trim_words( wp_strip_all_tags( $clean_content ), 30 ) );
+						}
+					}
+
+					// Featured Image Configuration
+					$thumb_id = get_post_thumbnail_id( $post_id );
+					$post_img = get_the_post_thumbnail_url( $post_id, 'full' );
+					
+					if ( ! empty( $avada_og_image ) ) {
+						$og_img_url  = esc_url( $avada_og_image );
+						$og_thumb_id = attachment_url_to_postid( $avada_og_image );
+						$img_src    = $og_thumb_id ? wp_get_attachment_image_src( $og_thumb_id, 'full' ) : false;
+						$img_width  = $img_src ? (int) $img_src[1] : 1200;
+						$img_height = $img_src ? (int) $img_src[2] : 630;
+						$img_mime   = iconiferz_get_image_mime( $og_thumb_id );
+					} elseif ( $post_img ) {
+						$og_img_url = esc_url( $post_img );
+						$img_src    = wp_get_attachment_image_src( $thumb_id, 'full' );
+						$img_width  = $img_src ? (int) $img_src[1] : 1200;
+						$img_height = $img_src ? (int) $img_src[2] : 630;
+						$img_mime   = iconiferz_get_image_mime( $thumb_id );
+					} else {
+						$og_img_url = false;
+					}
+
+					$cats        = get_the_category( $post_id );
+					$primary_cat = ! empty( $cats ) ? esc_attr( $cats[0]->name ) : '';
+
+					$tags_list = get_the_tags( $post_id );
+					$tag_names = array();
+					if ( $tags_list && ! is_wp_error( $tags_list ) ) {
+						foreach ( $tags_list as $t ) {
+							$tag_names[] = esc_attr( $t->name );
+						}
+					}
+
+					$word_count = str_word_count( wp_strip_all_tags( strip_shortcodes( $post_obj->post_content ) ) );
+
+					echo '<meta name="description" content="' . $post_exc . '">' . "\n";
+					echo '<meta property="og:type" content="article">' . "\n";
+					echo '<meta property="og:title" content="' . $og_title . '">' . "\n";
+					echo '<meta property="og:description" content="' . $post_exc . '">' . "\n";
+					echo '<meta property="og:url" content="' . $post_url . '">' . "\n";
+					
+					if ( $og_img_url ) {
+						echo '<meta property="og:image" content="' . esc_url( $og_img_url ) . '">' . "\n";
+						echo '<meta property="og:image:type" content="' . $img_mime . '">' . "\n";
+						echo '<meta property="og:image:width" content="' . $img_width . '">' . "\n";
+						echo '<meta property="og:image:height" content="' . $img_height . '">' . "\n";
+						echo '<meta property="og:image:alt" content="' . $og_title . '">' . "\n";
+					} else {
+						echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+						echo '<meta property="og:image:type" content="image/webp">' . "\n";
+						echo '<meta property="og:image:width" content="1200">' . "\n";
+						echo '<meta property="og:image:height" content="630">' . "\n";
+						echo '<meta property="og:image:alt" content="iCONIFERz – Technology News &amp; Insights">' . "\n";
+					}
+
+					// Twitter Cards Integration
+					echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+					echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
+					echo '<meta name="twitter:title" content="' . $og_title . '">' . "\n";
+					echo '<meta name="twitter:description" content="' . $post_exc . '">' . "\n";
+					echo '<meta name="twitter:image" content="' . esc_url( $og_img_url ? $og_img_url : ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+					echo '<meta property="article:published_time" content="' . $pub_date . '">' . "\n";
+					echo '<meta property="article:modified_time" content="' . $mod_date . '">' . "\n";
+					echo '<meta property="article:author" content="https://www.linkedin.com/in/ahmedumeraziz/">' . "\n";
+
+					if ( $primary_cat ) {
+						echo '<meta property="article:section" content="' . $primary_cat . '">' . "\n";
+					}
+					foreach ( $tag_names as $tag ) {
+						echo '<meta property="article:tag" content="' . $tag . '">' . "\n";
+					}
+
+					$author_entity = iconiferz_get_author_entity( $author_obj );
+					$about_entities = array();
+					if ( ! empty( $tags_list ) && ! is_wp_error( $tags_list ) ) {
+						foreach ( $tags_list as $t ) {
+							$about_entities[] = array( '@type' => 'Thing', 'name' => $t->name );
+						}
+					}
+
+					$speakable = array(
+						'@type'       => 'SpeakableSpecification',
+						'cssSelector' => array( 'h1', '.fusion-text p:first-child' ),
+					);
+					
+					$schema_graph[] = array(
+						'@type'       => 'WebPage',
+						'@id'         => $post_url . '#webpage',
+						'url'         => $post_url,
+						'name'        => $og_title,
+						'description' => $post_exc,
+						'isPartOf'    => array( '@id' => ICONIFERZ_SITE_URL . '/#website' ),
+						'breadcrumb'  => $breadcrumbs_arr ? array( '@id' => $post_url . '#breadcrumb' ) : null,
+					);
+					
+					$article_schema = array(
+						'@type'            => 'BlogPosting',
+						'@id'              => $post_url . '#article',
+						'isPartOf'         => array( '@id' => $post_url . '#webpage' ),
+						'headline'         => get_the_title( $post_id ),
+						'url'              => $post_url,
+						'datePublished'    => $pub_date,
+						'dateModified'     => $mod_date,
+						'wordCount'        => $word_count,
+						'inLanguage'       => 'en-US',
+						'author'           => $author_entity,
+						'publisher'        => array( '@id' => ICONIFERZ_SITE_URL . '/#organization' ),
+						'description'      => $post_exc,
+						'mainEntityOfPage' => array( '@id' => $post_url . '#webpage' ),
+						'copyrightYear'    => (int) get_the_date( 'Y', $post_id ),
+						'copyrightHolder'  => array( '@id' => ICONIFERZ_SITE_URL . '/#organization' ),
+						'speakable'        => $speakable,
+						'accessMode'       => array( 'textual', 'visual' ),
+						'accessibilityFeature' => array( 'alternativeText', 'readingOrder' ),
+						// Google Required Schema Fix: Always provide an image object, even if no featured image is set
+						'image'            => array(
+							'@type' => 'ImageObject',
+							'url'   => $post_img ? $post_img : ICONIFERZ_FALLBACK_SOCIAL_IMG,
+						),
+					);
+					
+					if ( ! empty( $tag_names ) ) {
+						$article_schema['keywords'] = implode( ', ', array_map( 'wp_strip_all_tags', $tag_names ) );
+					}
+					if ( ! empty( $about_entities ) ) {
+						$article_schema['about'] = $about_entities;
+					}
+
+					$sources_raw = get_post_meta( $post_id, '_iconiferz_sources', true );
+					if ( $sources_raw ) {
+						$source_urls = array_filter( array_map( 'trim', explode( '||', $sources_raw ) ) );
+						$citations   = array();
+						foreach ( $source_urls as $src_url ) {
+							$citations[] = array( '@type' => 'CreativeWork', 'url' => esc_url( $src_url ) );
+						}
+						if ( ! empty( $citations ) ) {
+							$article_schema['citation'] = $citations;
+						}
+					}
+
+					$schema_graph[] = $article_schema;
+
+					$faqs = iconiferz_extract_faqs( $post_obj->post_content, $post_id );
+					if ( ! empty( $faqs ) ) {
+						$faq_entities = array();
+						foreach ( $faqs as $faq ) {
+							$faq_entities[] = array(
+								'@type'          => 'Question',
+								'name'           => $faq['question'],
+								'acceptedAnswer' => array(
+									'@type' => 'Answer',
+									'text'  => $faq['answer'],
+								),
+							);
+						}
+						$schema_graph[] = array(
+							'@type'      => 'FAQPage',
+							'@id'        => $post_url . '#faq',
+							'isPartOf'   => array( '@id' => $post_url . '#webpage' ),
+							'mainEntity' => $faq_entities,
+						);
+					}
+
+					// SPEED: Smart LCP Asset Preload Control
+					$show_featured = true;
+					if ( function_exists( 'fusion_get_page_option' ) ) {
+						$show_opt = fusion_get_page_option( 'show_first_featured_image', $post_id );
+						if ( 'no' === $show_opt || '0' === $show_opt ) {
+							$show_featured = false;
+						}
+					}
+
+					if ( $show_featured && $post_img && $thumb_id ) {
+						$srcset = wp_get_attachment_image_srcset( $thumb_id, 'full' );
+						$sizes  = wp_get_attachment_image_sizes( $thumb_id, 'full' );
+						if ( $srcset && $sizes ) {
+							echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( $post_img ) . '" imagesrcset="' . esc_attr( $srcset ) . '" imagesizes="' . esc_attr( $sizes ) . '">' . "\n";
+						} else {
+							echo '<link rel="preload" as="image" fetchpriority="high" href="' . esc_url( $post_img ) . '">' . "\n";
+						}
+					}
 				}
+			}
+
+			// ---------------------------------------------------------------
+			// CATEGORY PAGES
+			// ---------------------------------------------------------------
+			if ( is_category() ) {
+				$cat_obj  = get_queried_object();
+				$cat_name = esc_attr( $cat_obj->name );
+				$cat_url  = esc_url( get_category_link( $cat_obj->term_id ) );
+				$cat_desc = strip_tags( $cat_obj->description );
+				$cat_og   = $cat_desc ? esc_attr( $cat_desc ) : 'Browse all ' . $cat_name . ' articles on iCONIFERz – latest technology news and expert insights.';
+				
+				echo '<meta name="description" content="' . $cat_og . '">' . "\n";
+				echo '<meta property="og:type" content="website">' . "\n";
+				echo '<meta property="og:title" content="' . $cat_name . ' News &amp; Insights | iCONIFERz">' . "\n";
+				echo '<meta property="og:description" content="' . $cat_og . '">' . "\n";
+				echo '<meta property="og:url" content="' . $cat_url . '">' . "\n";
+				echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+				echo '<meta property="og:image:type" content="image/webp">' . "\n";
+				echo '<meta property="og:image:width" content="1200">' . "\n";
+				echo '<meta property="og:image:height" content="630">' . "\n";
+				echo '<meta property="og:image:alt" content="' . $cat_name . ' – iCONIFERz">' . "\n";
 
 				// Twitter Cards Integration
 				echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
 				echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
-				echo '<meta name="twitter:title" content="' . $page_title . ' | iCONIFERz">' . "\n";
-				echo '<meta name="twitter:description" content="' . $page_exc . '">' . "\n";
-				echo '<meta name="twitter:image" content="' . esc_url( $final_og_image ) . '">' . "\n";
-
+				echo '<meta name="twitter:title" content="' . $cat_name . ' News &amp; Insights | iCONIFERz">' . "\n";
+				echo '<meta name="twitter:description" content="' . $cat_og . '">' . "\n";
+				echo '<meta name="twitter:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+				
 				$schema_graph[] = array(
-					'@type'       => 'WebPage',
-					'@id'         => $page_url . '#webpage',
-					'url'         => $page_url,
-					'name'        => $page_title,
-					'description' => $page_exc,
+					'@type'       => 'CollectionPage',
+					'@id'         => $cat_url . '#collection',
+					'name'        => $cat_name . ' News & Insights | iCONIFERz',
+					'url'         => $cat_url,
+					'description' => wp_strip_all_tags( $cat_og ),
+					'inLanguage'  => 'en-US',
 					'isPartOf'    => array( '@id' => ICONIFERZ_SITE_URL . '/#website' ),
-					'breadcrumb'  => $breadcrumbs_arr ? array( '@id' => $page_url . '#breadcrumb' ) : null,
+				);
+			}
+
+			// ---------------------------------------------------------------
+			// AUTHOR ARCHIVE
+			// ---------------------------------------------------------------
+			if ( is_author() ) {
+				$author    = get_queried_object();
+				$auth_name = esc_attr( $author->display_name );
+				$auth_url  = esc_url( get_author_posts_url( $author->ID ) );
+				$auth_bio  = esc_attr( wp_strip_all_tags( $author->description ) );
+				$auth_og   = $auth_bio ? $auth_bio : $auth_name . ' – Technology journalist at iCONIFERz with 13+ years of experience in tech news.';
+				
+				echo '<meta name="description" content="' . $auth_og . '">' . "\n";
+				echo '<meta property="og:type" content="website">' . "\n";
+				echo '<meta property="og:title" content="' . $auth_name . ' | Technology Journalist | iCONIFERz">' . "\n";
+				echo '<meta property="og:description" content="' . $auth_og . '">' . "\n";
+				echo '<meta property="og:url" content="' . $auth_url . '">' . "\n";
+				echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+				echo '<meta property="og:image:type" content="image/webp">' . "\n";
+				echo '<meta property="og:image:width" content="1200">' . "\n";
+				echo '<meta property="og:image:height" content="630">' . "\n";
+				echo '<meta property="og:image:alt" content="' . $auth_name . ' – iCONIFERz Technology Journalist">' . "\n";
+				
+				// Twitter Cards Integration
+				echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+				echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
+				echo '<meta name="twitter:title" content="' . $auth_name . ' | Technology Journalist | iCONIFERz">' . "\n";
+				echo '<meta name="twitter:description" content="' . $auth_og . '">' . "\n";
+				echo '<meta name="twitter:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+
+				$author_obj    = get_userdata( $author->ID );
+				$person_schema = iconiferz_get_author_entity( $author_obj );
+				$person_schema['mainEntityOfPage'] = array(
+					'@type' => 'WebPage',
+					'@id'   => $auth_url,
 				);
 
-				$page_faqs = iconiferz_extract_faqs( $post_obj->post_content, $post_id );
-				if ( ! empty( $page_faqs ) ) {
-					$faq_entities = array();
-					foreach ( $page_faqs as $faq ) {
-						$faq_entities[] = array(
-							'@type'          => 'Question',
-							'name'           => $faq['question'],
-							'acceptedAnswer' => array(
-								'@type' => 'Answer',
-								'text'  => $faq['answer'],
-							),
+				$schema_graph[] = $person_schema;
+			}
+
+			// ---------------------------------------------------------------
+			// TAG ARCHIVE
+			// ---------------------------------------------------------------
+			if ( is_tag() ) {
+				$tag_obj  = get_queried_object();
+				$tag_name = esc_attr( $tag_obj->name );
+				$tag_url  = esc_url( get_tag_link( $tag_obj->term_id ) );
+				$tag_desc = strip_tags( $tag_obj->description );
+				$tag_og   = $tag_desc ? esc_attr( $tag_desc ) : 'Articles tagged "' . $tag_name . '" on iCONIFERz – latest technology news and insights.';
+				
+				echo '<meta name="description" content="' . $tag_og . '">' . "\n";
+				echo '<meta property="og:type" content="website">' . "\n";
+				echo '<meta property="og:title" content="' . $tag_name . ' | iCONIFERz">' . "\n";
+				echo '<meta property="og:description" content="' . $tag_og . '">' . "\n";
+				echo '<meta property="og:url" content="' . $tag_url . '">' . "\n";
+				echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+				echo '<meta property="og:image:type" content="image/webp">' . "\n";
+				echo '<meta property="og:image:width" content="1200">' . "\n";
+				echo '<meta property="og:image:height" content="630">' . "\n";
+				echo '<meta property="og:image:alt" content="' . $tag_name . ' – iCONIFERz">' . "\n";
+
+				// Twitter Cards Integration
+				echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+				echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
+				echo '<meta name="twitter:title" content="' . $tag_name . ' | iCONIFERz">' . "\n";
+				echo '<meta name="twitter:description" content="' . $tag_og . '">' . "\n";
+				echo '<meta name="twitter:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+				
+				$schema_graph[] = array(
+					'@type'       => 'CollectionPage',
+					'@id'         => $tag_url . '#collection',
+					'name'        => $tag_name . ' | iCONIFERz',
+					'url'         => $tag_url,
+					'description' => wp_strip_all_tags( $tag_og ),
+					'inLanguage'  => 'en-US',
+					'isPartOf'    => array( '@id' => ICONIFERZ_SITE_URL . '/#website' ),
+				);
+			}
+
+			// ---------------------------------------------------------------
+			// STATIC PAGES (About, Contact, Privacy, etc.)
+			// ---------------------------------------------------------------
+			if ( is_page() && ! is_front_page() ) {
+				$post_obj = get_post( $post_id );
+				if ( $post_obj ) {
+					$page_url = esc_url( get_permalink( $post_id ) );
+					$page_tid = get_post_thumbnail_id( $post_id );
+					
+					// Fetch Custom Avada Data
+					$avada_seo_title = iconiferz_get_avada_seo_meta( $post_id, 'seo_title' );
+					$avada_meta_desc = iconiferz_get_avada_seo_meta( $post_id, 'meta_description' );
+					$avada_og_image  = iconiferz_get_avada_seo_meta( $post_id, 'open_graph_image' );
+
+					$page_title = ! empty( $avada_seo_title ) ? esc_attr( wp_strip_all_tags( $avada_seo_title ) ) : esc_attr( get_the_title( $post_id ) );
+					
+					if ( ! empty( $avada_meta_desc ) ) {
+						$page_exc = esc_attr( wp_strip_all_tags( $avada_meta_desc ) );
+					} else {
+						$raw_page_exc = has_excerpt( $post_id ) ? get_the_excerpt( $post_id ) : '';
+						if ( ! empty( $raw_page_exc ) ) {
+							$page_exc = esc_attr( wp_strip_all_tags( $raw_page_exc ) );
+						} else {
+							$clean_content = strip_shortcodes( $post_obj->post_content );
+							$page_exc      = esc_attr( wp_trim_words( wp_strip_all_tags( $clean_content ), 30 ) );
+						}
+					}
+
+					echo '<meta name="description" content="' . $page_exc . '">' . "\n";
+					echo '<meta property="og:type" content="website">' . "\n";
+					echo '<meta property="og:title" content="' . $page_title . ' | iCONIFERz">' . "\n";
+					echo '<meta property="og:description" content="' . $page_exc . '">' . "\n";
+					echo '<meta property="og:url" content="' . $page_url . '">' . "\n";
+					
+					$final_og_image = ICONIFERZ_FALLBACK_SOCIAL_IMG;
+					if ( ! empty( $avada_og_image ) ) {
+						$final_og_image = esc_url( $avada_og_image );
+						$og_thumb_id    = attachment_url_to_postid( $avada_og_image );
+						$page_mime      = iconiferz_get_image_mime( $og_thumb_id );
+						echo '<meta property="og:image" content="' . esc_url( $final_og_image ) . '">' . "\n";
+						echo '<meta property="og:image:type" content="' . $page_mime . '">' . "\n";
+						echo '<meta property="og:image:alt" content="' . $page_title . ' – iCONIFERz">' . "\n";
+					} elseif ( $page_tid ) {
+						$page_img       = get_the_post_thumbnail_url( $post_id, 'full' );
+						$final_og_image = esc_url( $page_img );
+						$page_mime      = iconiferz_get_image_mime( $page_tid );
+						echo '<meta property="og:image" content="' . esc_url( $final_og_image ) . '">' . "\n";
+						echo '<meta property="og:image:type" content="' . $page_mime . '">' . "\n";
+						echo '<meta property="og:image:alt" content="' . $page_title . ' – iCONIFERz">' . "\n";
+					} else {
+						echo '<meta property="og:image" content="' . esc_url( ICONIFERZ_FALLBACK_SOCIAL_IMG ) . '">' . "\n";
+						echo '<meta property="og:image:type" content="image/webp">' . "\n";
+						echo '<meta property="og:image:width" content="1200">' . "\n";
+						echo '<meta property="og:image:height" content="630">' . "\n";
+						echo '<meta property="og:image:alt" content="' . $page_title . ' – iCONIFERz">' . "\n";
+					}
+
+					// Twitter Cards Integration
+					echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+					echo '<meta name="twitter:site" content="@iconiferz">' . "\n";
+					echo '<meta name="twitter:title" content="' . $page_title . ' | iCONIFERz">' . "\n";
+					echo '<meta name="twitter:description" content="' . $page_exc . '">' . "\n";
+					echo '<meta name="twitter:image" content="' . esc_url( $final_og_image ) . '">' . "\n";
+					
+					$schema_graph[] = array(
+						'@type'       => 'WebPage',
+						'@id'         => $page_url . '#webpage',
+						'url'         => $page_url,
+						'name'        => $page_title,
+						'description' => $page_exc,
+						'isPartOf'    => array( '@id' => ICONIFERZ_SITE_URL . '/#website' ),
+						'breadcrumb'  => $breadcrumbs_arr ? array( '@id' => $page_url . '#breadcrumb' ) : null,
+					);
+					
+					$page_faqs = iconiferz_extract_faqs( $post_obj->post_content, $post_id );
+					if ( ! empty( $page_faqs ) ) {
+						$faq_entities = array();
+						foreach ( $page_faqs as $faq ) {
+							$faq_entities[] = array(
+								'@type'          => 'Question',
+								'name'           => $faq['question'],
+								'acceptedAnswer' => array(
+									'@type' => 'Answer',
+									'text'  => $faq['answer'],
+								),
+							);
+						}
+						$schema_graph[] = array(
+							'@type'      => 'FAQPage',
+							'@id'        => $page_url . '#faq',
+							'isPartOf'   => array( '@id' => $page_url . '#webpage' ),
+							'mainEntity' => $faq_entities,
 						);
 					}
-					$schema_graph[] = array(
-						'@type'      => 'FAQPage',
-						'@id'        => $page_url . '#faq',
-						'isPartOf'   => array( '@id' => $page_url . '#webpage' ),
-						'mainEntity' => $faq_entities,
-					);
 				}
 			}
-		}
 
-		// ---------------------------------------------------------------
-		// SECURITY-SAFE PRINTING OF THE UNIFIED SEMANTIC GRAPH
-		// ---------------------------------------------------------------
-		if ( ! empty( $schema_graph ) ) {
-			$unified_payload = array(
-				'@context' => 'https://schema.org',
-				'@graph'   => $schema_graph,
-			);
-			// SECURITY HARDENING: Use HTML-Hex flags to prevent XSS breakout attempts in output data
-			echo '<script type="application/ld+json">' . wp_json_encode( $unified_payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . '</script>' . "\n";
-		}
+			// ---------------------------------------------------------------
+			// SECURITY-SAFE PRINTING OF THE UNIFIED SEMANTIC GRAPH
+			// ---------------------------------------------------------------
+			if ( ! empty( $schema_graph ) ) {
+				$unified_payload = array(
+					'@context' => 'https://schema.org',
+					'@graph'   => $schema_graph,
+				);
+				// SECURITY HARDENING: Use HTML-Hex flags to prevent XSS breakout
+				echo '<script type="application/ld+json">' . wp_json_encode( $unified_payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . '</script>' . "\n";
+			}
+		} // <-- END of Schema Generation block (Now correctly bypasses Schema on 404s but continues to Preconnects)
 
-// ===============================================================
+		// ===============================================================
 		// SPEED — Preconnect & DNS Prefetch Assets (FIXED SYNTAX)
 		// ===============================================================
 		echo '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n";
@@ -954,7 +942,7 @@ if ( ! function_exists( 'iconiferz_seo_head' ) ) {
 		echo '<link rel="dns-prefetch" href="//www.google-analytics.com">' . "\n";
 		echo '<link rel="dns-prefetch" href="//www.googletagmanager.com">' . "\n";
 		
-		// NEW: Preload the main style sheet dynamically to reduce render blocking
+		// Preload the main style sheet dynamically to reduce render blocking
 		echo '<link rel="preload" href="' . get_stylesheet_uri() . '" as="style">' . "\n";
 
 		if ( ! is_single() ) {
@@ -970,9 +958,6 @@ if ( ! function_exists( 'iconiferz_seo_head' ) ) {
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 	<?php Avada()->head->the_viewport(); ?>
 
-	<!-- ==========================================
-	     MOBILE CLS ACCELERATOR (CRITICAL INLINE CSS)
-	     ========================================== -->
 	<style>
   @media only screen and (max-width: 800px) {
     /* Prevent layout shifting by reserving header space */
@@ -987,7 +972,7 @@ if ( ! function_exists( 'iconiferz_seo_head' ) ) {
     .fusion-footer, 
     #footer, 
     .fusion-sliding-bar-wrapper { 
-      content-visibility: auto; 
+      content-visibility: auto;
       contain-intrinsic-size: 300px;
     }
   }
